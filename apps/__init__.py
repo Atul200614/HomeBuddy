@@ -1,1 +1,0 @@
-# HomeBuddy Application Modules
