@@ -19,16 +19,31 @@ IS_VERCEL = os.path.exists('/var/task') or bool(os.environ.get('VERCEL'))
 if IS_VERCEL:
     tmp_db = Path('/tmp/db.sqlite3')
     bundled_db = BASE_DIR / 'homebuddy.sqlite3'
+    if not bundled_db.exists():
+        bundled_db = Path('/var/task/homebuddy.sqlite3')
+
     if not tmp_db.exists() and bundled_db.exists():
-        shutil.copy2(bundled_db, tmp_db)
+        try:
+            shutil.copy2(bundled_db, tmp_db)
+        except Exception as e:
+            print(f"Error copying bundled db: {e}")
 
 application = get_wsgi_application()
-app = application
 
-# Automatically create or update database tables on Vercel
-if IS_VERCEL:
-    from django.core.management import call_command
-    try:
-        call_command('migrate', '--noinput')
-    except Exception as e:
-        print(f"Migration notice: {e}")
+# Wrap with WhiteNoise to serve static files reliably
+try:
+    from whitenoise import WhiteNoise
+    static_dir = BASE_DIR / 'staticfiles'
+    if not static_dir.exists():
+        static_dir = BASE_DIR / 'static'
+    if not static_dir.exists():
+        static_dir = Path('/var/task/staticfiles')
+    if not static_dir.exists():
+        static_dir = Path('/var/task/static')
+
+    if static_dir.exists():
+        application = WhiteNoise(application, root=str(static_dir), prefix='/static/')
+except Exception as e:
+    print(f"WhiteNoise WSGI notice: {e}")
+
+app = application
