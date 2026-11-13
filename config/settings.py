@@ -20,6 +20,9 @@ from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Detect Vercel serverless environment reliably
+IS_VERCEL = os.path.exists('/var/task') or bool(os.environ.get('VERCEL'))
+
 # Load environment variables from .env (never committed to version control)
 load_dotenv(BASE_DIR / '.env')
 
@@ -57,11 +60,11 @@ if not SECRET_KEY:
             "    python -c \"import secrets; print(secrets.token_urlsafe(64))\""
         )
 
-ALLOWED_HOSTS = env_list('ALLOWED_HOSTS', 'localhost,127.0.0.1,[::1]')
+ALLOWED_HOSTS = env_list('ALLOWED_HOSTS', '.vercel.app,localhost,127.0.0.1,[::1]')
 
 CSRF_TRUSTED_ORIGINS = env_list(
     'CSRF_TRUSTED_ORIGINS',
-    'http://localhost:8000,http://127.0.0.1:8000',
+    'https://*.vercel.app,http://localhost:8000,http://127.0.0.1:8000',
 )
 
 # ---------------------------------------------------------------------------
@@ -98,6 +101,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -130,12 +134,12 @@ WSGI_APPLICATION = 'config.wsgi.application'
 ASGI_APPLICATION = 'config.asgi.application'
 
 # ---------------------------------------------------------------------------
-# Database: MySQL 8.0 by default, SQLite fallback for quick local demos
+# Database: MySQL 8.0 by default, SQLite fallback (writable /tmp on Vercel)
 # ---------------------------------------------------------------------------
 DB_ENGINE = os.getenv('DB_ENGINE', 'sqlite').lower()
 USE_SQLITE_FALLBACK = env_bool('USE_SQLITE_FALLBACK', True)
 
-if DB_ENGINE == 'mysql' and not USE_SQLITE_FALLBACK:
+if DB_ENGINE == 'mysql' and not USE_SQLITE_FALLBACK and not IS_VERCEL:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.mysql',
@@ -154,7 +158,7 @@ else:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'homebuddy.sqlite3',
+            'NAME': '/tmp/db.sqlite3' if IS_VERCEL else BASE_DIR / 'homebuddy.sqlite3',
         }
     }
 
@@ -192,7 +196,7 @@ STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_ROOT = '/tmp/media' if IS_VERCEL else BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
@@ -237,7 +241,7 @@ REST_FRAMEWORK = {
 }
 
 # ---------------------------------------------------------------------------
-# CORS — explicit allow-list (the React/Vite dev server only)
+# CORS — explicit allow-list
 # ---------------------------------------------------------------------------
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = env_list(
@@ -247,16 +251,13 @@ CORS_ALLOWED_ORIGINS = env_list(
 CORS_ALLOW_CREDENTIALS = True
 
 # ---------------------------------------------------------------------------
-# Razorpay (test mode).
-# Leave the keys empty to run in clearly-labelled DEMO mode — no real money,
-# no fake signature claims. Fill both keys to switch to the real gateway.
+# Razorpay (test mode)
 # ---------------------------------------------------------------------------
 RAZORPAY_KEY_ID = os.getenv('RAZORPAY_KEY_ID', '').strip()
 RAZORPAY_KEY_SECRET = os.getenv('RAZORPAY_KEY_SECRET', '').strip()
 RAZORPAY_WEBHOOK_SECRET = os.getenv('RAZORPAY_WEBHOOK_SECRET', '').strip()
 RAZORPAY_CURRENCY = os.getenv('RAZORPAY_CURRENCY', 'INR').strip() or 'INR'
 
-# Demo mode is forced on unless both live credentials exist.
 RAZORPAY_DEMO_MODE = env_bool(
     'RAZORPAY_DEMO_MODE',
     not (RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET),
@@ -335,7 +336,7 @@ SESSION_COOKIE_AGE = 60 * 60 * 12  # 12 hours
 if not DEBUG:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
-    SECURE_SSL_REDIRECT = env_bool('SECURE_SSL_REDIRECT', True)
+    SECURE_SSL_REDIRECT = env_bool('SECURE_SSL_REDIRECT', False if IS_VERCEL else True)
     SECURE_HSTS_SECONDS = int(os.getenv('SECURE_HSTS_SECONDS', '31536000'))
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
