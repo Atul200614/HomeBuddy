@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block content %}
+<div class="container py-4">
+
+    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between pb-3 mb-4 border-bottom gap-3">
+        <div>
+            <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3 py-1 fw-bold small">FINANCE</span>
+            <h2 class="fw-bold mb-1 mt-1">Technician Payouts</h2>
+            <p class="text-muted small mb-0">Approve requests, settle bank transfers and mark ledger entries as paid.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'admin_dashboard:payments' %}" class="btn btn-outline-dark btn-sm rounded-pill">
+                <i class="bi bi-credit-card"></i> Payments
+            </a>
+            <a href="{% url 'admin_dashboard:index' %}" class="btn btn-outline-secondary btn-sm rounded-pill">
+                <i class="bi bi-arrow-left"></i> Admin Center
+            </a>
+        </div>
+    </div>
+
+    <div class="d-flex gap-2 mb-3 flex-wrap">
+        <a href="{% url 'admin_dashboard:payouts' %}" class="btn btn-sm rounded-pill {% if not selected_status %}btn-dark{% else %}btn-outline-secondary{% endif %}">All</a>
+        <a href="?status=REQUESTED" class="btn btn-sm rounded-pill {% if selected_status == 'REQUESTED' %}btn-warning text-dark{% else %}btn-outline-secondary{% endif %}">Requested</a>
+        <a href="?status=APPROVED" class="btn btn-sm rounded-pill {% if selected_status == 'APPROVED' %}btn-info text-dark{% else %}btn-outline-secondary{% endif %}">Approved</a>
+        <a href="?status=TRANSFERRED" class="btn btn-sm rounded-pill {% if selected_status == 'TRANSFERRED' %}btn-success{% else %}btn-outline-secondary{% endif %}">Transferred</a>
+        <a href="?status=REJECTED" class="btn btn-sm rounded-pill {% if selected_status == 'REJECTED' %}btn-danger{% else %}btn-outline-secondary{% endif %}">Rejected</a>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light text-muted small">
+                    <tr>
+                        <th class="ps-3">TECHNICIAN</th>
+                        <th>AMOUNT</th>
+                        <th>BANK</th>
+                        <th>STATUS</th>
+                        <th>REQUESTED</th>
+                        <th class="text-end pe-3">ACTIONS</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in payouts %}
+                        <tr>
+                            <td class="ps-3">
+                                <div class="fw-bold">{{ p.provider.business_name|default:p.provider.user.get_full_name }}</div>
+                                <small class="text-muted">{{ p.provider.user.email }}</small>
+                            </td>
+                            <td class="fw-bold text-success">₹{{ p.amount|intcomma }}</td>
+                            <td>
+                                <div class="small">{{ p.bank_account_name }}</div>
+                                <small class="text-muted">{{ p.masked_account }} · {{ p.bank_ifsc }}</small>
+                            </td>
+                            <td>
+                                <span class="badge rounded-pill
+                                    {% if p.status == 'TRANSFERRED' %}bg-success
+                                    {% elif p.status == 'REJECTED' %}bg-danger
+                                    {% elif p.status == 'APPROVED' %}bg-info text-dark
+                                    {% else %}bg-warning text-dark{% endif %}">
+                                    {{ p.get_status_display }}
+                                </span>
+                            </td>
+                            <td><small class="text-muted">{{ p.requested_at|date:"d M Y" }}</small></td>
+                            <td class="text-end pe-3">
+                                {% if p.status == 'REQUESTED' %}
+                                    <div class="d-inline-flex gap-1">
+                                        <form action="{% url 'admin_dashboard:process_payout' payout_id=p.id action='approve' %}" method="POST" class="d-inline">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-success btn-sm rounded-pill px-3">Approve</button>
+                                        </form>
+                                        <form action="{% url 'admin_dashboard:process_payout' payout_id=p.id action='reject' %}" method="POST" class="d-inline"
+                                              onsubmit="return confirm('Reject this payout request?');">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="admin_reference" value="Rejected by finance admin">
+                                            <button type="submit" class="btn btn-outline-danger btn-sm rounded-pill px-3">Reject</button>
+                                        </form>
+                                    </div>
+                                {% elif p.status == 'APPROVED' %}
+                                    <form action="{% url 'admin_dashboard:process_payout' payout_id=p.id action='transfer' %}" method="POST" class="d-flex gap-1 justify-content-end">
+                                        {% csrf_token %}
+                                        <label class="visually-hidden" for="ref{{ p.id }}">Bank reference</label>
+                                        <input type="text" name="admin_reference" id="ref{{ p.id }}" class="form-control form-control-sm" style="max-width:150px;" placeholder="UTR / ref" required>
+                                        <button type="submit" class="btn btn-dark btn-sm rounded-pill px-3 text-nowrap">Mark paid</button>
+                                    </form>
+                                {% else %}
+                                    <small class="text-muted">{{ p.admin_reference|default:"—" }}</small>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="6" class="text-center py-5 text-muted">No payout requests yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% include 'partials/pagination.html' %}
+</div>
+{% endblock %}

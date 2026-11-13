@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 800px;">
+    <div class="d-flex align-items-center justify-content-between pb-3 mb-4 border-bottom">
+        <div>
+            <h2 class="fw-bold mb-1">Your Notifications</h2>
+            <p class="text-muted small mb-0">Booking updates, technician arrival alerts, and invoice generation notifications.</p>
+        </div>
+        <form action="{% url 'notifications:mark_all_read' %}" method="POST" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-secondary btn-sm rounded-pill">
+                <i class="bi bi-check2-all"></i> Mark All as Read
+            </button>
+        </form>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white">
+        <ul class="list-group list-group-flush">
+            {% for n in notifications %}
+                <li class="list-group-item p-3 {% if not n.is_read %}bg-light border-start border-4 border-success{% endif %}">
+                    <div class="d-flex justify-content-between align-items-start gap-3">
+                        <div class="d-flex align-items-start gap-3">
+                            <span class="rounded-circle p-2 fs-5 
+                                {% if n.notification_type == 'BOOKING' %}bg-primary bg-opacity-10 text-primary
+                                {% elif n.notification_type == 'PAYMENT' %}bg-success bg-opacity-10 text-success
+                                {% elif n.notification_type == 'VERIFICATION' %}bg-warning bg-opacity-10 text-warning
+                                {% else %}bg-secondary bg-opacity-10 text-secondary{% endif %}">
+                                <i class="bi 
+                                    {% if n.notification_type == 'BOOKING' %}bi-calendar-check
+                                    {% elif n.notification_type == 'PAYMENT' %}bi-cash-coin
+                                    {% elif n.notification_type == 'VERIFICATION' %}bi-patch-check
+                                    {% else %}bi-bell{% endif %}"></i>
+                            </span>
+                            <div>
+                                <h6 class="fw-bold mb-1 text-dark">{{ n.title }}</h6>
+                                <p class="text-muted small mb-1">{{ n.message }}</p>
+                                <small class="text-muted">{{ n.created_at|date:"d M Y, h:i A" }}</small>
+                            </div>
+                        </div>
+
+                        <div>
+                            {% if not n.is_read %}
+                                <form action="{% url 'notifications:mark_read' notification_id=n.id %}" method="POST" class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-outline-success btn-sm rounded-pill text-nowrap">
+                                        Open &amp; Read
+                                    </button>
+                                </form>
+                            {% elif n.link_url %}
+                                <a href="{{ n.link_url }}" class="btn btn-light btn-sm rounded-pill text-nowrap">
+                                    View
+                                </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </li>
+            {% empty %}
+                <li class="list-group-item text-center py-5 text-muted">
+                    <i class="bi bi-bell-slash fs-1 text-muted d-block mb-2"></i>
+                    <p class="mb-0">No notifications on file.</p>
+                </li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+{% endblock %}

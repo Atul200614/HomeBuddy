@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 800px;">
+    <div class="d-flex align-items-center justify-content-between pb-3 mb-4 border-bottom">
+        <div>
+            <span class="badge bg-warning text-dark rounded-pill px-3 py-1 fw-bold mb-2">QUALITY COMPLIANCE</span>
+            <h2 class="fw-bold mb-1">Submit Work Proof</h2>
+            <p class="text-muted small mb-0">Booking #{{ booking.booking_number }} — {{ booking.service.name }}</p>
+        </div>
+        <a href="{% url 'professionals:jobs' %}" class="btn btn-outline-secondary btn-sm rounded-pill">
+            <i class="bi bi-arrow-left"></i> My Jobs
+        </a>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 p-4 p-md-5 bg-white">
+        <div class="alert alert-info rounded-4 mb-4 small">
+            <i class="bi bi-shield-check me-2 fs-5"></i>
+            <strong>Mandatory Work Proof:</strong> To ensure transparent customer sign-off and trigger commission payout, please upload both a clear <strong>Before-Work photo</strong> and an <strong>After-Work photo</strong> along with your work summary notes.
+        </div>
+
+        <form method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="row g-4 mb-4">
+                <div class="col-md-6">
+                    <label class="form-label small fw-bold text-dark">
+                        <i class="bi bi-camera me-1 text-danger"></i> 1. Before-Work Photo (Prior to starting)
+                    </label>
+                    <input type="file" name="before_photo" class="form-control" accept="image/*" required>
+                    {% if proof.before_photo %}
+                        <div class="mt-2">
+                            <small class="text-muted d-block mb-1">Current Upload:</small>
+                            <img src="{{ proof.before_photo.url }}" class="img-thumbnail rounded-3" style="max-height:140px;">
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label small fw-bold text-dark">
+                        <i class="bi bi-camera-fill me-1 text-success"></i> 2. After-Work Photo (Upon completion)
+                    </label>
+                    <input type="file" name="after_photo" class="form-control" accept="image/*" required>
+                    {% if proof.after_photo %}
+                        <div class="mt-2">
+                            <small class="text-muted d-block mb-1">Current Upload:</small>
+                            <img src="{{ proof.after_photo.url }}" class="img-thumbnail rounded-3" style="max-height:140px;">
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label small fw-bold text-dark">
+                    <i class="bi bi-pencil-square me-1 text-primary"></i> 3. Description of Work Completed
+                </label>
+                <textarea name="work_notes" rows="4" class="form-control" placeholder="Specify steps completed, e.g. 'Deep vacuumed living room carpet, degreased kitchen exhaust chimney, mechanized scrubber used on bathroom tiles'..." required>{{ proof.work_notes }}</textarea>
+            </div>
+
+            <button type="submit" class="btn btn-hb-green rounded-pill px-4 py-2 w-100 fw-bold">
+                <i class="bi bi-cloud-arrow-up-fill me-1"></i> Submit Work Proof for Customer Approval
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row align-items-center g-5 mb-5">
+        <div class="col-lg-6">
+            <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3 py-2 fw-bold mb-3">ABOUT HOMEBUDDY</span>
+            <h1 class="fw-extrabold mb-3 text-dark">Building Trust in Every Urban Household.</h1>
+            <p class="text-muted leading-relaxed">
+                HomeBuddy was conceptualized and developed by <strong>Atul Patel</strong> as a TYBSc Computer Science project to solve the fragmentation, unreliability, and pricing opacity in the domestic home-services sector.
+            </p>
+            <p class="text-muted">
+                Our marketplace connects homeowners and commercial spaces with certified, background-verified technicians who take pride in craftsmanship. We combine digital verification, transparent upfront quotes, automated commission settlements, and before-and-after photographic work proofs to ensure complete peace of mind.
+            </p>
+            <div class="row g-3 mt-3">
+                <div class="col-6">
+                    <div class="border rounded-4 p-3 bg-white shadow-sm">
+                        <h3 class="fw-bold text-success mb-0">100%</h3>
+                        <small class="text-muted">Background Verified Staff</small>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="border rounded-4 p-3 bg-white shadow-sm">
+                        <h3 class="fw-bold text-warning mb-0">₹0</h3>
+                        <small class="text-muted">Hidden Fees / Surcharges</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="rounded-4 overflow-hidden shadow-lg">
+                <img src="https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=700&q=80" alt="Clean Apartment Living" class="img-fluid w-100">
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

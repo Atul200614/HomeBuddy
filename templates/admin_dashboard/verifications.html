@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex align-items-center justify-content-between pb-3 mb-4 border-bottom">
+        <div>
+            <h2 class="fw-bold mb-1">Technician KYC Verification Queue</h2>
+            <p class="text-muted small mb-0">Review submitted identity proofs, police clearances, and trade certificates before granting the Verified Badge.</p>
+        </div>
+        <a href="{% url 'admin_dashboard:index' %}" class="btn btn-outline-secondary btn-sm rounded-pill">
+            <i class="bi bi-arrow-left"></i> Admin Center
+        </a>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light text-muted small">
+                    <tr>
+                        <th class="ps-3">TECHNICIAN / BUSINESS</th>
+                        <th>DOCUMENT TYPE</th>
+                        <th>SUBMITTED</th>
+                        <th>FILE PREVIEW</th>
+                        <th>STATUS</th>
+                        <th class="text-end pe-3">VERIFICATION ACTION</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for doc in documents %}
+                        <tr>
+                            <td class="ps-3">
+                                <div class="fw-bold text-dark">{{ doc.provider.business_name }}</div>
+                                <small class="text-muted">{{ doc.provider.user.get_full_name }} • {{ doc.provider.user.phone }}</small>
+                            </td>
+                            <td><span class="badge bg-light text-dark border">{{ doc.get_document_type_display }}</span></td>
+                            <td>{{ doc.submitted_at|date:"d M Y, h:i A" }}</td>
+                            <td>
+                                <a href="{{ doc.document_file.url }}" target="_blank" class="btn btn-outline-dark btn-sm rounded-pill py-1 px-3">
+                                    <i class="bi bi-eye"></i> View Doc
+                                </a>
+                            </td>
+                            <td>
+                                <span class="badge 
+                                    {% if doc.status == 'APPROVED' %}bg-success
+                                    {% elif doc.status == 'REJECTED' %}bg-danger
+                                    {% else %}bg-warning text-dark{% endif %} rounded-pill px-3 py-1">
+                                    {{ doc.get_status_display }}
+                                </span>
+                            </td>
+                            <td class="text-end pe-3">
+                                {% if doc.status == 'PENDING' %}
+                                    <div class="d-inline-flex gap-2">
+                                        <form action="{% url 'admin_dashboard:process_verification' doc_id=doc.id action='approve' %}" method="POST" class="d-inline">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-success btn-sm rounded-pill px-3" onclick="return confirm('Approve KYC and grant verified badge?')">
+                                                Approve
+                                            </button>
+                                        </form>
+                                        <form action="{% url 'admin_dashboard:process_verification' doc_id=doc.id action='reject' %}" method="POST" class="d-inline">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-danger btn-sm rounded-pill px-3" onclick="return confirm('Reject document?')">
+                                                Reject
+                                            </button>
+                                        </form>
+                                    </div>
+                                {% else %}
+                                    <small class="text-muted">Reviewed {{ doc.reviewed_at|date:"d M Y" }}</small>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-muted">
+                                No verification documents pending review.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% include 'partials/pagination.html' %}
+</div>
+{% endblock %}

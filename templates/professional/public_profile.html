@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row g-4">
+        <!-- Profile Sidebar -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm rounded-4 p-4 text-center bg-white">
+                <div class="position-relative d-inline-block mx-auto mb-3">
+                    {% if provider.user.avatar %}
+                        <img src="{{ provider.user.avatar.url }}" alt="{{ provider.business_name }}" class="rounded-circle shadow" width="120" height="120" style="object-fit:cover;">
+                    {% else %}
+                        <div class="rounded-circle bg-success text-white d-flex align-items-center justify-content-center mx-auto shadow" style="width:120px; height:120px; font-size:2.5rem; font-weight:800;">
+                            {{ provider.business_name|slice:":1"|upper }}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <h4 class="fw-bold mb-1">{{ provider.business_name }}</h4>
+                <p class="text-muted small mb-2">{{ provider.user.get_full_name }}</p>
+
+                {% if provider.is_verified %}
+                    <div class="mb-3">
+                        <span class="hb-verified-badge"><i class="bi bi-patch-check-fill"></i> KYC Background Verified</span>
+                    </div>
+                {% endif %}
+
+                <div class="d-flex justify-content-center gap-3 py-3 border-top border-bottom mb-3 text-center">
+                    <div>
+                        <div class="fs-5 fw-bold text-warning">{{ provider.avg_rating }}★</div>
+                        <small class="text-muted">{{ provider.total_reviews }} Reviews</small>
+                    </div>
+                    <div class="vr"></div>
+                    <div>
+                        <div class="fs-5 fw-bold text-dark">{{ provider.total_jobs_completed }}</div>
+                        <small class="text-muted">Jobs Done</small>
+                    </div>
+                    <div class="vr"></div>
+                    <div>
+                        <div class="fs-5 fw-bold text-dark">{{ provider.experience_years }}y</div>
+                        <small class="text-muted">Experience</small>
+                    </div>
+                </div>
+
+                <div class="text-start small mb-3">
+                    <p class="mb-1"><i class="bi bi-geo-alt-fill text-danger me-1"></i> <strong>Location:</strong> {{ provider.service_city }}</p>
+                    <p class="mb-0"><i class="bi bi-pin-map-fill text-primary me-1"></i> <strong>Pincodes:</strong> {{ provider.service_pincodes }}</p>
+                </div>
+
+                <a href="{% url 'services:list' %}" class="btn btn-hb-green w-100 rounded-pill">
+                    Book This Professional
+                </a>
+            </div>
+        </div>
+
+        <!-- Details & Customer Reviews -->
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm rounded-4 p-4 bg-white mb-4">
+                <h5 class="fw-bold mb-3">About {{ provider.business_name }}</h5>
+                <p class="text-muted leading-relaxed mb-4">
+                    {{ provider.bio|default:"Certified and dedicated professional specializing in residential domestic care, repairs, and installations. Equipped with professional tools and committed to prompt punctuality and high quality standards." }}
+                </p>
+
+                <h6 class="fw-bold mb-2">Verified Trade Skills</h6>
+                <div class="d-flex flex-wrap gap-2 mb-2">
+                    {% for s in skills %}
+                        <span class="badge bg-light text-dark border rounded-pill px-3 py-2">
+                            <i class="bi bi-check-circle-fill text-success me-1"></i> {{ s.skill_name }} ({{ s.years_experience }} yrs)
+                        </span>
+                    {% empty %}
+                        <span class="badge bg-light text-dark border rounded-pill px-3 py-2">General Maintenance & Repairs</span>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Customer Reviews List -->
+            <div class="card border-0 shadow-sm rounded-4 p-4 bg-white">
+                <h5 class="fw-bold mb-3">Verified Customer Reviews ({{ reviews.count }})</h5>
+                {% for r in reviews %}
+                    <div class="border-bottom pb-3 mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="fw-bold text-dark">{{ r.customer.user.get_full_name|default:"Verified Customer" }}</span>
+                            <span class="text-warning fw-bold">{{ r.rating }} ★</span>
+                        </div>
+                        <p class="text-muted small mb-1">{{ r.review_text }}</p>
+                        <small class="text-muted" style="font-size:0.75rem;">Service: {{ r.booking.service.name }} • {{ r.created_at|date:"d M Y" }}</small>
+                    </div>
+                {% empty %}
+                    <p class="text-muted small mb-0">No customer reviews yet. Be the first to book and rate!</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

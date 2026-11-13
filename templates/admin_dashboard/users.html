@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex align-items-center justify-content-between pb-3 mb-4 border-bottom">
+        <div>
+            <h2 class="fw-bold mb-1">User & Provider Management</h2>
+            <p class="text-muted small mb-0">Suspend, activate, and manage platform roles for customers and service technicians.</p>
+        </div>
+        <a href="{% url 'admin_dashboard:index' %}" class="btn btn-outline-secondary btn-sm rounded-pill">
+            <i class="bi bi-arrow-left"></i> Admin Center
+        </a>
+    </div>
+
+    <!-- Filter Pills -->
+    <div class="d-flex gap-2 mb-3">
+        <a href="{% url 'admin_dashboard:users' %}" class="btn btn-sm rounded-pill {% if not selected_role %}btn-dark{% else %}btn-outline-secondary{% endif %}">All Users</a>
+        <a href="{% url 'admin_dashboard:users' %}?role=CUSTOMER" class="btn btn-sm rounded-pill {% if selected_role == 'CUSTOMER' %}btn-dark{% else %}btn-outline-secondary{% endif %}">Customers</a>
+        <a href="{% url 'admin_dashboard:users' %}?role=PROVIDER" class="btn btn-sm rounded-pill {% if selected_role == 'PROVIDER' %}btn-dark{% else %}btn-outline-secondary{% endif %}">Technicians</a>
+        <a href="{% url 'admin_dashboard:users' %}?role=ADMIN" class="btn btn-sm rounded-pill {% if selected_role == 'ADMIN' %}btn-dark{% else %}btn-outline-secondary{% endif %}">Admins</a>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light text-muted small">
+                    <tr>
+                        <th class="ps-3">NAME & EMAIL</th>
+                        <th>PHONE</th>
+                        <th>ROLE</th>
+                        <th>REGISTERED</th>
+                        <th>STATUS</th>
+                        <th class="text-end pe-3">ACCOUNT ACTIONS</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in users %}
+                        <tr>
+                            <td class="ps-3">
+                                <div class="fw-bold text-dark">{{ u.get_full_name|default:u.username }}</div>
+                                <small class="text-muted">{{ u.email }}</small>
+                            </td>
+                            <td>{{ u.phone|default:"—" }}</td>
+                            <td>
+                                <span class="badge {% if u.role == 'ADMIN' %}bg-danger{% elif u.role == 'PROVIDER' %}bg-warning text-dark{% else %}bg-primary{% endif %} rounded-pill">
+                                    {{ u.get_role_display }}
+                                </span>
+                            </td>
+                            <td>{{ u.date_joined|date:"d M Y" }}</td>
+                            <td>
+                                <span class="badge {% if u.is_active %}bg-success{% else %}bg-secondary{% endif %} rounded-pill">
+                                    {% if u.is_active %}Active{% else %}Suspended{% endif %}
+                                </span>
+                            </td>
+                            <td class="text-end pe-3">
+                                <form action="{% url 'admin_dashboard:toggle_user_active' user_id=u.id %}" method="POST" class="d-inline"
+                                      onsubmit="return confirm('Change this account status?');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-outline-{% if u.is_active %}danger{% else %}success{% endif %} btn-sm rounded-pill px-3">
+                                        {% if u.is_active %}Suspend{% else %}Activate{% endif %}
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center py-4 text-muted">No users found.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% include 'partials/pagination.html' %}
+</div>
+{% endblock %}

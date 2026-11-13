@@ -1,0 +1,103 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Breadcrumb & Header -->
+    <div class="mb-4">
+        <h2 class="fw-bold mb-1">Explore Home Services</h2>
+        <p class="text-muted small">Select verified domestic repair, deep cleaning, electrical, and maintenance services in Pune.</p>
+    </div>
+
+    <div class="row g-4">
+        <!-- Sidebar Filters -->
+        <div class="col-lg-3">
+            <div class="card border-0 shadow-sm rounded-4 p-4 bg-white sticky-top" style="top: 80px; z-index: 100;">
+                <h5 class="fw-bold mb-3">Filters</h5>
+                <form action="{% url 'services:list' %}" method="GET">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Search Keywords</label>
+                        <input type="text" name="q" class="form-control form-control-sm" placeholder="e.g. Deep cleaning, Tap, AC" value="{{ query }}">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Service Category</label>
+                        <select name="category" class="form-select form-select-sm">
+                            <option value="">All Categories</option>
+                            {% for c in categories %}
+                                <option value="{{ c.slug }}" {% if selected_category == c.slug %}selected{% endif %}>{{ c.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Maximum Budget (₹)</label>
+                        <input type="number" name="max_price" class="form-control form-control-sm" placeholder="Max price" value="{{ max_price }}">
+                    </div>
+
+                    <div class="form-check mb-4">
+                        <input class="form-check-input" type="checkbox" name="verified" value="1" id="verifiedOnly" {% if verified_only %}checked{% endif %}>
+                        <label class="form-check-label small fw-semibold" for="verifiedOnly">
+                            <i class="bi bi-patch-check-fill text-success"></i> Verified Pros Only
+                        </label>
+                    </div>
+
+                    <button type="submit" class="btn btn-hb-green btn-sm w-100 rounded-pill mb-2">Apply Filters</button>
+                    <a href="{% url 'services:list' %}" class="btn btn-outline-secondary btn-sm w-100 rounded-pill">Reset</a>
+                </form>
+            </div>
+        </div>
+
+        <!-- Services Cards Grid -->
+        <div class="col-lg-9">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <span class="small text-muted">Showing <strong>{{ services.count }}</strong> services</span>
+            </div>
+
+            <div class="row g-4">
+                {% for s in services %}
+                    <div class="col-md-6 col-xl-4">
+                        <div class="hb-service-card">
+                            {% if s.image %}
+                                <img src="{{ s.image.url }}" alt="{{ s.name }}" class="hb-service-img">
+                            {% else %}
+                                <div class="hb-service-img d-flex align-items-center justify-content-center bg-light text-muted">
+                                    <i class="bi bi-tools fs-1"></i>
+                                </div>
+                            {% endif %}
+                            <div class="p-3 d-flex flex-column flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="badge bg-light text-dark border small">{{ s.category.name }}</span>
+                                    <small class="text-muted"><i class="bi bi-clock"></i> {{ s.estimated_duration_minutes }}m</small>
+                                </div>
+                                <h6 class="fw-bold mb-1 mt-1 text-dark">{{ s.name }}</h6>
+                                <p class="text-muted small flex-grow-1 mb-2">{{ s.short_description|truncatewords:12 }}</p>
+                                
+                                <div class="d-flex align-items-center justify-content-between pt-3 border-top mt-auto">
+                                    <div>
+                                        <small class="text-muted d-block" style="font-size:0.75rem;">Starts at</small>
+                                        <span class="hb-price-badge">₹{{ s.base_price }}</span>
+                                    </div>
+                                    <a href="{% url 'services:detail' slug=s.slug %}" class="btn btn-hb-green btn-sm rounded-pill px-3">
+                                        View & Book
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% empty %}
+                    <div class="col-12">
+                        <div class="alert alert-light border text-center py-5 rounded-4">
+                            <i class="bi bi-search fs-1 text-muted d-block mb-2"></i>
+                            <h5 class="fw-bold">No Services Found</h5>
+                            <p class="text-muted small">Try broadening your search term or clearing the active filters.</p>
+                            <a href="{% url 'services:list' %}" class="btn btn-hb-green btn-sm rounded-pill">View All Services</a>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        {% include 'partials/pagination.html' %}
+    </div>
+</div>
+{% endblock %}
