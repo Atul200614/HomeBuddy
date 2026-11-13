@@ -171,12 +171,12 @@ class ProviderRegistrationForm(PasswordValidatedMixin, forms.ModelForm):
 
 
 class UserLoginForm(forms.Form):
-    email = forms.EmailField(
-        widget=forms.EmailInput(attrs={
-            'class': 'form-control', 'placeholder': 'name@example.com',
-            'autofocus': True, 'autocomplete': 'email',
+    email = forms.CharField(
+        widget=forms.TextInput(attrs={
+            'class': 'form-control', 'placeholder': 'Email or username (e.g. admin or rahul.sharma@example.com)',
+            'autofocus': True, 'autocomplete': 'username',
         }),
-        label="Email Address",
+        label="Email or Username",
     )
     password = forms.CharField(
         widget=forms.PasswordInput(attrs={

@@ -22,13 +22,27 @@ if IS_VERCEL:
     if not bundled_db.exists():
         bundled_db = Path('/var/task/homebuddy.sqlite3')
 
-    if not tmp_db.exists() and bundled_db.exists():
-        try:
-            shutil.copy2(bundled_db, tmp_db)
-        except Exception as e:
-            print(f"Error copying bundled db: {e}")
+    if bundled_db.exists():
+        should_copy = not tmp_db.exists() or (tmp_db.stat().st_size != bundled_db.stat().st_size)
+        if should_copy:
+            try:
+                shutil.copy2(bundled_db, tmp_db)
+            except Exception as e:
+                print(f"Error copying bundled db: {e}")
 
 application = get_wsgi_application()
+
+# Self-healing verification: guarantee users exist in database
+if IS_VERCEL:
+    try:
+        from apps.accounts.models import User
+        if not User.objects.filter(role='ADMIN').exists():
+            from django.core.management import call_command
+            call_command('migrate', '--noinput')
+            call_command('seed_homebuddy')
+            print("Successfully bootstrapped default demonstration users in /tmp/db.sqlite3")
+    except Exception as e:
+        print(f"Auto-seed check notice: {e}")
 
 # Wrap with WhiteNoise to serve static files reliably
 try:

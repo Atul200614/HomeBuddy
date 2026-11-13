@@ -172,6 +172,11 @@ else:
 # Custom User Model (Accounts app)
 AUTH_USER_MODEL = 'accounts.User'
 
+AUTHENTICATION_BACKENDS = [
+    'apps.accounts.backends.EmailOrUsernameModelBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
+
 # ---------------------------------------------------------------------------
 # Authentication
 # ---------------------------------------------------------------------------
