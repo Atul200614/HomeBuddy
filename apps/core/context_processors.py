@@ -19,7 +19,7 @@ def global_context(request):
     unread_notifications = 0
     active_bookings_count = 0
 
-    if request.user.is_authenticated:
+    if hasattr(request, 'user') and getattr(request.user, 'is_authenticated', False):
         try:
             unread_notifications = Notification.objects.filter(
                 user=request.user, is_read=False

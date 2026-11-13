@@ -61,6 +61,10 @@ if not SECRET_KEY:
         )
 
 ALLOWED_HOSTS = env_list('ALLOWED_HOSTS', '.vercel.app,localhost,127.0.0.1,[::1]')
+if IS_VERCEL:
+    for host in ['.vercel.app', '*']:
+        if host not in ALLOWED_HOSTS:
+            ALLOWED_HOSTS.append(host)
 
 CSRF_TRUSTED_ORIGINS = env_list(
     'CSRF_TRUSTED_ORIGINS',
