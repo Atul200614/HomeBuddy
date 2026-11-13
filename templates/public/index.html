@@ -1,0 +1,390 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container">
+    
+    <!-- 1. HERO BANNER (Direct reproduction of reference image) -->
+    <div class="hb-hero-container">
+        <div class="row align-items-center g-4">
+            <div class="col-lg-7">
+                <span class="hb-badge-tag">
+                    <i class="bi bi-stars"></i> FESTIVAL SPECIAL OFFER
+                </span>
+                <h1 class="hb-hero-title">
+                    Deep Home Cleaning <span>Reinvented.</span>
+                </h1>
+                <p class="hb-hero-subtitle">
+                    Get your home sanitized, spotless, and sparkling with eco-friendly products and certified 5-star background-checked professionals.
+                </p>
+                <div class="d-flex flex-wrap align-items-center gap-3">
+                    <a href="{% url 'services:list' %}?category=cleaning" class="btn btn-hb-primary">
+                        Book Deep Cleaning <i class="bi bi-arrow-right"></i>
+                    </a>
+                    <span class="badge bg-dark bg-opacity-50 text-warning px-3 py-2 rounded-pill border border-warning border-opacity-25">
+                        <i class="bi bi-clock-history"></i> Valid till Nov 30, 2026
+                    </span>
+                </div>
+            </div>
+
+            <!-- Hero Image Card with Satisfaction Guarantee Badge -->
+            <div class="col-lg-5">
+                <div class="hb-hero-img-card position-relative">
+                    <img src="https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=700&q=80" alt="Spotless Living Room" class="img-fluid w-100" style="height:320px; object-fit:cover;">
+                    <div class="hb-guarantee-pill shadow">
+                        <i class="bi bi-shield-fill-check text-warning fs-5"></i>
+                        <div>
+                            <div class="fw-bold leading-tight">Satisfaction 100%</div>
+                            <small class="text-white-50">Guaranteed Service</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. TRUST VALUE PROPOSITIONS RIBBON (safsafaiwala reference) -->
+    <div class="hb-trust-ribbon">
+        <div class="row g-3">
+            <div class="col-lg-3 col-sm-6">
+                <div class="hb-trust-item">
+                    <div class="hb-trust-icon">
+                        <i class="bi bi-patch-check-fill"></i>
+                    </div>
+                    <div>
+                        <div class="fw-bold text-dark small">ISO 9001:2015 Certified</div>
+                        <small class="text-muted">Standardized Home Care</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-sm-6">
+                <div class="hb-trust-item">
+                    <div class="hb-trust-icon">
+                        <i class="bi bi-person-badge-fill"></i>
+                    </div>
+                    <div>
+                        <div class="fw-bold text-dark small">100% Background-Checked</div>
+                        <small class="text-muted">Police Verified Staff</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-sm-6">
+                <div class="hb-trust-item">
+                    <div class="hb-trust-icon">
+                        <i class="bi bi-people-fill"></i>
+                    </div>
+                    <div>
+                        <div class="fw-bold text-dark small">Trained & Professional</div>
+                        <small class="text-muted">Dedicated Teams</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-sm-6">
+                <div class="hb-trust-item">
+                    <div class="hb-trust-icon">
+                        <i class="bi bi-flower1"></i>
+                    </div>
+                    <div>
+                        <div class="fw-bold text-dark small">Eco-Friendly Products</div>
+                        <small class="text-muted">Pet & Child Safe</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. EMERGENCY BANNER (Prompt requirement REQ-12) -->
+    <div class="alert bg-white border border-danger border-opacity-50 rounded-4 shadow-sm p-3 mb-5 d-flex flex-column flex-md-row align-items-center justify-content-between gap-3">
+        <div class="d-flex align-items-center gap-3">
+            <span class="rounded-circle bg-danger bg-opacity-10 text-danger p-3 d-flex align-items-center justify-content-center">
+                <i class="bi bi-lightning-charge-fill fs-3"></i>
+            </span>
+            <div>
+                <h5 class="fw-bold mb-1 text-danger">Emergency Home Repair Needed Right Now?</h5>
+                <p class="mb-0 text-muted small">Water pipe burst, sudden power outage, or emergency lock jam? Get a verified technician dispatched in under 45 minutes.</p>
+            </div>
+        </div>
+        <a href="{% url 'bookings:emergency' %}" class="btn btn-danger rounded-pill px-4 fw-bold text-nowrap">
+            <i class="bi bi-bell-fill"></i> Request Emergency Dispatch
+        </a>
+    </div>
+
+    <!-- 4. CATEGORY GRID ("Your Space, Our Expertise - Choose your category") -->
+    <div class="mb-5">
+        <div class="d-flex align-items-end justify-content-between mb-4">
+            <div>
+                <h2 class="fw-extrabold text-dark mb-1">Your Space, Our Expertise</h2>
+                <p class="text-muted mb-0">Choose your category to explore transparent, upfront pricing.</p>
+            </div>
+            <a href="{% url 'services:list' %}" class="text-success fw-bold text-decoration-none small">
+                Explore All Services <i class="bi bi-arrow-right"></i>
+            </a>
+        </div>
+
+        <div class="row g-3">
+            {% for cat in categories %}
+                <div class="col-xl-2 col-lg-3 col-md-4 col-6">
+                    <a href="{% url 'services:category_detail' slug=cat.slug %}" class="hb-category-card">
+                        <div class="hb-cat-icon-wrap">
+                            <i class="bi {{ cat.icon_name|default:'bi-tools' }}"></i>
+                        </div>
+                        <h6 class="fw-bold mb-1">{{ cat.name }}</h6>
+                        <small class="text-muted">{{ cat.services.count }} Options</small>
+                    </a>
+                </div>
+            {% empty %}
+                <!-- Dynamic Fallback Preview if DB has not yet been seeded -->
+                <div class="col-xl-2 col-lg-3 col-md-4 col-6">
+                    <a href="{% url 'services:list' %}" class="hb-category-card">
+                        <div class="hb-cat-icon-wrap"><i class="bi bi-droplet-half"></i></div>
+                        <h6 class="fw-bold mb-1">Deep Cleaning</h6>
+                        <small class="text-muted">From ₹1,499</small>
+                    </a>
+                </div>
+                <div class="col-xl-2 col-lg-3 col-md-4 col-6">
+                    <a href="{% url 'services:list' %}" class="hb-category-card">
+                        <div class="hb-cat-icon-wrap"><i class="bi bi-lightning-charge"></i></div>
+                        <h6 class="fw-bold mb-1">Electrician</h6>
+                        <small class="text-muted">From ₹299</small>
+                    </a>
+                </div>
+                <div class="col-xl-2 col-lg-3 col-md-4 col-6">
+                    <a href="{% url 'services:list' %}" class="hb-category-card">
+                        <div class="hb-cat-icon-wrap"><i class="bi bi-wrench"></i></div>
+                        <h6 class="fw-bold mb-1">Plumbing</h6>
+                        <small class="text-muted">From ₹299</small>
+                    </a>
+                </div>
+                <div class="col-xl-2 col-lg-3 col-md-4 col-6">
+                    <a href="{% url 'services:list' %}" class="hb-category-card">
+                        <div class="hb-cat-icon-wrap"><i class="bi bi-brush"></i></div>
+                        <h6 class="fw-bold mb-1">Painting</h6>
+                        <small class="text-muted">From ₹4,999</small>
+                    </a>
+                </div>
+                <div class="col-xl-2 col-lg-3 col-md-4 col-6">
+                    <a href="{% url 'services:list' %}" class="hb-category-card">
+                        <div class="hb-cat-icon-wrap"><i class="bi bi-hammer"></i></div>
+                        <h6 class="fw-bold mb-1">Carpentry</h6>
+                        <small class="text-muted">From ₹349</small>
+                    </a>
+                </div>
+                <div class="col-xl-2 col-lg-3 col-md-4 col-6">
+                    <a href="{% url 'services:list' %}" class="hb-category-card">
+                        <div class="hb-cat-icon-wrap"><i class="bi bi-snow"></i></div>
+                        <h6 class="fw-bold mb-1">Appliance Repair</h6>
+                        <small class="text-muted">From ₹499</small>
+                    </a>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- 5. FEATURED SERVICES & PACKAGES (BHK Packages from reference) -->
+    <div class="mb-5">
+        <div class="d-flex align-items-center justify-content-between mb-4">
+            <div>
+                <h3 class="fw-bold mb-1">Full House Deep Cleaning & Packages</h3>
+                <p class="text-muted mb-0 small">A complete deep clean for a fresher, healthier home.</p>
+            </div>
+            <a href="{% url 'services:list' %}" class="btn btn-outline-success btn-sm rounded-pill">View All</a>
+        </div>
+
+        <div class="row g-4">
+            <!-- 2 BHK Card -->
+            <div class="col-lg-4 col-md-6">
+                <div class="hb-service-card">
+                    <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=600&q=80" alt="2 BHK Cleaning" class="hb-service-img">
+                    <div class="p-3 d-flex flex-column flex-grow-1">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-2 py-1 small">Vacant / Furnished</span>
+                            <span class="small text-muted"><i class="bi bi-clock"></i> 4-5 Hrs</span>
+                        </div>
+                        <h5 class="fw-bold mb-1">2 BHK Full Deep Cleaning</h5>
+                        <p class="text-muted small flex-grow-1">Upto 800 sq.ft comprehensive cleaning: kitchen degreasing, bathroom scrubbing, floor buffing & balcony.</p>
+                        <div class="d-flex align-items-center justify-content-between pt-3 border-top mt-2">
+                            <div>
+                                <small class="text-muted d-block">Starts at</small>
+                                <span class="hb-price-badge">₹5,999</span>
+                            </div>
+                            <a href="{% url 'services:list' %}?q=2+BHK" class="btn btn-hb-green btn-sm">Book Service</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3 BHK Card -->
+            <div class="col-lg-4 col-md-6">
+                <div class="hb-service-card">
+                    <img src="https://images.unsplash.com/photo-1600566753376-12c8ab7fb75b?auto=format&fit=crop&w=600&q=80" alt="3 BHK Cleaning" class="hb-service-img">
+                    <div class="p-3 d-flex flex-column flex-grow-1">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-2 py-1 small">Popular Choice</span>
+                            <span class="small text-muted"><i class="bi bi-clock"></i> 6-7 Hrs</span>
+                        </div>
+                        <h5 class="fw-bold mb-1">3 BHK Full Deep Cleaning</h5>
+                        <p class="text-muted small flex-grow-1">Upto 1200 sq.ft thorough sanitation: cabinets, windows, fans, tiles, dry vacuuming, and deodorization.</p>
+                        <div class="d-flex align-items-center justify-content-between pt-3 border-top mt-2">
+                            <div>
+                                <small class="text-muted d-block">Starts at</small>
+                                <span class="hb-price-badge">₹6,999</span>
+                            </div>
+                            <a href="{% url 'services:list' %}?q=3+BHK" class="btn btn-hb-green btn-sm">Book Service</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4 BHK Card -->
+            <div class="col-lg-4 col-md-6">
+                <div class="hb-service-card">
+                    <img src="https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=600&q=80" alt="4 BHK Cleaning" class="hb-service-img">
+                    <div class="p-3 d-flex flex-column flex-grow-1">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="badge bg-warning bg-opacity-10 text-dark rounded-pill px-2 py-1 small">Large Homes</span>
+                            <span class="small text-muted"><i class="bi bi-clock"></i> 7-8 Hrs</span>
+                        </div>
+                        <h5 class="fw-bold mb-1">4 BHK Large Home Deep Clean</h5>
+                        <p class="text-muted small flex-grow-1">Upto 2000 sq.ft estate cleaning: full mechanized scrubbing, 3 bathrooms, large balconies & deep kitchen care.</p>
+                        <div class="d-flex align-items-center justify-content-between pt-3 border-top mt-2">
+                            <div>
+                                <small class="text-muted d-block">Starts at</small>
+                                <span class="hb-price-badge">₹7,999</span>
+                            </div>
+                            <a href="{% url 'services:list' %}?q=4+BHK" class="btn btn-hb-green btn-sm">Book Service</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 6. WHY CHOOSE US (safsafaiwala reference) -->
+    <div class="bg-white border rounded-4 p-4 p-lg-5 mb-5 shadow-sm">
+        <div class="row align-items-center g-4">
+            <div class="col-lg-6">
+                <h3 class="fw-bold text-dark mb-2">WHY CHOOSE US</h3>
+                <p class="text-muted mb-4">Choose from our most booked home service packages, engineered for every home, apartment, and office space.</p>
+
+                <div class="row g-3">
+                    <div class="col-sm-6">
+                        <div class="d-flex align-items-start gap-2">
+                            <i class="bi bi-shield-check text-success fs-4"></i>
+                            <div>
+                                <h6 class="fw-bold mb-0">Trusted Followers</h6>
+                                <small class="text-muted">10,000+ happy homes served</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="d-flex align-items-start gap-2">
+                            <i class="bi bi-person-check text-primary fs-4"></i>
+                            <div>
+                                <h6 class="fw-bold mb-0">Pro Level Teams</h6>
+                                <small class="text-muted">Police verified & certified</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="d-flex align-items-start gap-2">
+                            <i class="bi bi-emoji-smile text-warning fs-4"></i>
+                            <div>
+                                <h6 class="fw-bold mb-0">Happy Clients</h6>
+                                <small class="text-muted">4.9/5 average service rating</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="d-flex align-items-start gap-2">
+                            <i class="bi bi-bell text-danger fs-4"></i>
+                            <div>
+                                <h6 class="fw-bold mb-0">Service Reminders</h6>
+                                <small class="text-muted">Real-time SMS & In-app alerts</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="d-flex align-items-start gap-2">
+                            <i class="bi bi-stopwatch text-info fs-4"></i>
+                            <div>
+                                <h6 class="fw-bold mb-0">Fast & Flexible</h6>
+                                <small class="text-muted">Hassle-free slot booking</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="d-flex align-items-start gap-2">
+                            <i class="bi bi-buildings text-secondary fs-4"></i>
+                            <div>
+                                <h6 class="fw-bold mb-0">Homes To Offices</h6>
+                                <small class="text-muted">Residential & Commercial care</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="rounded-4 overflow-hidden shadow">
+                    <img src="https://images.unsplash.com/photo-1527515637462-cff94eecc1ac?auto=format&fit=crop&w=700&q=80" alt="Professional cleaner in uniform" class="img-fluid w-100" style="height:340px; object-fit:cover;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 7. HOW TO GET STARTED (3-Step Timeline from reference) -->
+    <div class="mb-5 text-center">
+        <h3 class="fw-bold mb-1">How to get Started</h3>
+        <p class="text-muted mb-4">Book your cleaning or repair service in just 3 easy steps.</p>
+
+        <div class="row g-4 text-start">
+            <div class="col-md-4">
+                <div class="bg-white border rounded-4 p-4 h-100 shadow-sm text-center">
+                    <div class="rounded-circle bg-success bg-opacity-10 text-success d-inline-flex align-items-center justify-content-center p-3 mb-3" style="width:64px; height:64px;">
+                        <i class="bi bi-phone fs-2"></i>
+                    </div>
+                    <h5 class="fw-bold mb-2">1. Choose Service & Time</h5>
+                    <p class="text-muted small mb-0">Select your required domestic service, preferred date, and convenient 2-hour arrival window.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="bg-white border rounded-4 p-4 h-100 shadow-sm text-center">
+                    <div class="rounded-circle bg-warning bg-opacity-10 text-warning d-inline-flex align-items-center justify-content-center p-3 mb-3" style="width:64px; height:64px;">
+                        <i class="bi bi-shield-check fs-2"></i>
+                    </div>
+                    <h5 class="fw-bold mb-2">2. Verified Pro Arrives</h5>
+                    <p class="text-muted small mb-0">A background-checked, uniformed technician arrives equipped with certified tools and materials.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="bg-white border rounded-4 p-4 h-100 shadow-sm text-center">
+                    <div class="rounded-circle bg-info bg-opacity-10 text-info d-inline-flex align-items-center justify-content-center p-3 mb-3" style="width:64px; height:64px;">
+                        <i class="bi bi-check2-circle fs-2"></i>
+                    </div>
+                    <h5 class="fw-bold mb-2">3. Work Proof & Pay</h5>
+                    <p class="text-muted small mb-0">Inspect before/after work photos, confirm satisfaction, and pay securely via Razorpay or Cash on Service.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 8. LEAD CAPTURE CALLOUT BANNER (safsafaiwala reference) -->
+    <div class="hb-hero-container py-4 my-5" style="border-radius:24px;">
+        <div class="row align-items-center g-3">
+            <div class="col-lg-7">
+                <h4 class="fw-bold text-white mb-1">Har Din Ki Safai Ka Sahara — HomeBuddy</h4>
+                <p class="text-light text-opacity-75 mb-0 small">Speak to our support team and schedule your cleaning or repair today.</p>
+            </div>
+            <div class="col-lg-5">
+                <form action="{% url 'services:list' %}" method="GET" class="d-flex gap-2">
+                    <input type="text" name="q" class="form-control rounded-pill px-3" placeholder="Enter service or locality...">
+                    <button type="submit" class="btn btn-hb-primary text-nowrap">
+                        Book Now <i class="bi bi-arrow-right"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

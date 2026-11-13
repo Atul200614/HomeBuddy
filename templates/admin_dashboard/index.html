@@ -1,0 +1,157 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between pb-3 mb-4 border-bottom gap-3">
+        <div>
+            <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-3 py-1 fw-bold small">MARKETPLACE OPERATIONS</span>
+            <h2 class="fw-bold mb-1 mt-1">Admin Command Center</h2>
+            <p class="text-muted small mb-0">Platform oversight, KYC document verification queue, revenue ledger, and dispute management.</p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <a href="{% url 'admin_dashboard:verifications' %}" class="btn btn-warning btn-sm rounded-pill position-relative">
+                <i class="bi bi-patch-check"></i> KYC Queue
+                {% if pending_kyc > 0 %}
+                    <span class="badge bg-danger rounded-pill ms-1">{{ pending_kyc }}</span>
+                {% endif %}
+            </a>
+            <a href="{% url 'admin_dashboard:complaints' %}" class="btn btn-danger btn-sm rounded-pill position-relative">
+                <i class="bi bi-flag"></i> Disputes
+                {% if open_complaints > 0 %}
+                    <span class="badge bg-white text-danger rounded-pill ms-1">{{ open_complaints }}</span>
+                {% endif %}
+            </a>
+            <a href="/django-admin/" class="btn btn-dark btn-sm rounded-pill">
+                <i class="bi bi-database"></i> Django Admin
+            </a>
+        </div>
+    </div>
+
+    <!-- Live Aggregated Metrics Cards (Calculated from real DB queries) -->
+    <div class="row g-3 mb-4">
+        <div class="col-xl-3 col-sm-6">
+            <div class="card border-0 shadow-sm rounded-4 p-3 bg-white">
+                <span class="text-muted small fw-bold">TOTAL USERS</span>
+                <div class="d-flex align-items-baseline justify-content-between mt-1">
+                    <h3 class="fw-bold text-dark mb-0">{{ total_users }}</h3>
+                    <small class="text-muted">{{ total_customers }} Customers</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-sm-6">
+            <div class="card border-0 shadow-sm rounded-4 p-3 bg-white">
+                <span class="text-muted small fw-bold">SERVICE PROFESSIONALS</span>
+                <div class="d-flex align-items-baseline justify-content-between mt-1">
+                    <h3 class="fw-bold text-success mb-0">{{ total_providers }}</h3>
+                    <small class="badge bg-success bg-opacity-10 text-success rounded-pill">{{ verified_providers }} Verified</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-sm-6">
+            <div class="card border-0 shadow-sm rounded-4 p-3 bg-white">
+                <span class="text-muted small fw-bold">TOTAL BOOKINGS</span>
+                <div class="d-flex align-items-baseline justify-content-between mt-1">
+                    <h3 class="fw-bold text-primary mb-0">{{ total_bookings }}</h3>
+                    <small class="text-muted">{{ active_bookings }} Active</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-sm-6">
+            <div class="card border-0 shadow-sm rounded-4 p-3 bg-white">
+                <span class="text-muted small fw-bold">GROSS PLATFORM REVENUE</span>
+                <div class="d-flex align-items-baseline justify-content-between mt-1">
+                    <h3 class="fw-bold text-success mb-0">₹{{ total_revenue }}</h3>
+                    <small class="text-muted">Comm: ₹{{ platform_earnings }}</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <!-- Recent Bookings Stream -->
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white">
+                <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+                    <h5 class="fw-bold mb-0">Latest Platform Bookings</h5>
+                    <a href="{% url 'admin_dashboard:bookings' %}" class="small text-success fw-bold text-decoration-none">View All <i class="bi bi-chevron-right"></i></a>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light text-muted small">
+                            <tr>
+                                <th class="ps-3">BOOKING #</th>
+                                <th>SERVICE</th>
+                                <th>CUSTOMER</th>
+                                <th>TECHNICIAN</th>
+                                <th>AMOUNT</th>
+                                <th>STATUS</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for b in recent_bookings %}
+                                <tr>
+                                    <td class="ps-3 fw-bold small">{{ b.booking_number }}</td>
+                                    <td>{{ b.service.name }}</td>
+                                    <td class="small">{{ b.customer.user.get_full_name }}</td>
+                                    <td class="small">{{ b.provider.business_name|default:"Auto-Assign" }}</td>
+                                    <td class="fw-bold text-success">₹{{ b.total_amount }}</td>
+                                    <td>
+                                        <span class="badge 
+                                            {% if b.status == 'COMPLETED' %}bg-success
+                                            {% elif b.status == 'CANCELLED' %}bg-danger
+                                            {% elif b.status == 'WORK_PROOF_SUBMITTED' %}bg-warning text-dark
+                                            {% else %}bg-primary{% endif %} rounded-pill small">
+                                            {{ b.get_status_display }}
+                                        </span>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center py-4 text-muted">No bookings recorded yet.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pending KYC Verification Queue -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm rounded-4 p-4 bg-white">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold mb-0">KYC Review Queue</h5>
+                    <span class="badge bg-warning text-dark rounded-pill">{{ pending_kyc }} Pending</span>
+                </div>
+
+                {% for doc in recent_kyc %}
+                    <div class="border-bottom pb-3 mb-3">
+                        <div class="d-flex justify-content-between align-items-start mb-1">
+                            <span class="fw-bold text-dark small">{{ doc.provider.business_name }}</span>
+                            <span class="badge bg-light text-dark border">{{ doc.get_document_type_display }}</span>
+                        </div>
+                        <small class="text-muted d-block mb-2">Submitted: {{ doc.submitted_at|date:"d M Y" }}</small>
+                        <div class="d-flex gap-2">
+                            <a href="{{ doc.document_file.url }}" target="_blank" class="btn btn-outline-dark btn-sm rounded-pill py-1 px-3 small">
+                                Inspect Document
+                            </a>
+                            <form action="{% url 'admin_dashboard:process_verification' doc_id=doc.id action='approve' %}" method="POST" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-success btn-sm rounded-pill py-1 px-3 small">
+                                    Approve
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                {% empty %}
+                    <p class="text-muted small mb-0">All submitted technician documents have been vetted.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex align-items-center justify-content-between pb-3 mb-4 border-bottom">
+        <div>
+            <h2 class="fw-bold mb-1">Manage Delivery Addresses</h2>
+            <p class="text-muted small mb-0">Save your home, office, and apartment addresses in Pune for 1-click booking.</p>
+        </div>
+        <a href="{% url 'customers:dashboard' %}" class="btn btn-outline-secondary btn-sm rounded-pill">
+            <i class="bi bi-arrow-left"></i> Dashboard
+        </a>
+    </div>
+
+    <div class="row g-4">
+        <!-- Address List -->
+        <div class="col-lg-7">
+            <h5 class="fw-bold mb-3">Saved Addresses</h5>
+            <div class="d-flex flex-column gap-3">
+                {% for addr in addresses %}
+                    <div class="card border-0 shadow-sm rounded-4 p-3 bg-white position-relative">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <span class="badge {% if addr.title == 'Home' %}bg-primary{% elif addr.title == 'Office' %}bg-info text-dark{% else %}bg-secondary{% endif %} rounded-pill px-3 py-1 mb-2">
+                                    {{ addr.title }}
+                                </span>
+                                {% if addr.is_default %}
+                                    <span class="badge bg-success rounded-pill px-2 py-1 ms-1 small"><i class="bi bi-star-fill"></i> Default</span>
+                                {% endif %}
+                                <h6 class="fw-bold mb-1">{{ addr.address_line1 }}</h6>
+                                <p class="text-muted small mb-1">{{ addr.address_line2 }}</p>
+                                <p class="text-muted small mb-0">
+                                    {% if addr.landmark %}Landmark: {{ addr.landmark }} | {% endif %}
+                                    {{ addr.city }}, {{ addr.state }} - <strong>{{ addr.pincode }}</strong>
+                                </p>
+                            </div>
+                            <div>
+                                <form action="{% url 'customers:delete_address' address_id=addr.id %}" method="POST" class="d-inline" onsubmit="return confirm('Remove this address?')">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-outline-danger btn-sm rounded-circle p-2" title="Delete Address" aria-label="Delete address">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                {% empty %}
+                    <div class="alert alert-info rounded-4">
+                        <i class="bi bi-info-circle me-1"></i> You haven't added any addresses yet. Add your first delivery address on the right to start booking.
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Add Address Form -->
+        <div class="col-lg-5">
+            <div class="card border-0 shadow-sm rounded-4 p-4 bg-white">
+                <h5 class="fw-bold mb-3">Add New Address</h5>
+                <form method="POST">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Address Type</label>
+                        {{ form.title }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">House / Flat / Building</label>
+                        {{ form.address_line1 }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Area / Locality (Pune)</label>
+                        {{ form.address_line2 }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Landmark</label>
+                        {{ form.landmark }}
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">City</label>
+                            {{ form.city }}
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Pincode</label>
+                            {{ form.pincode }}
+                        </div>
+                    </div>
+                    <div class="form-check mb-4">
+                        {{ form.is_default }}
+                        <label class="form-check-label small fw-semibold" for="{{ form.is_default.id_for_label }}">
+                            Set as primary default address
+                        </label>
+                    </div>
+                    <button type="submit" class="btn btn-hb-green w-100 rounded-pill">
+                        <i class="bi bi-plus-circle"></i> Save Address
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
