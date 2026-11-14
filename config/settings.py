@@ -142,7 +142,7 @@ WSGI_APPLICATION = 'config.wsgi.application'
 ASGI_APPLICATION = 'config.asgi.application'
 
 # ---------------------------------------------------------------------------
-# Database: Render DATABASE_URL (PostgreSQL), MySQL 8.0, or SQLite fallback
+# Database: Supabase / Render DATABASE_URL (PostgreSQL), MySQL, or SQLite fallback
 # ---------------------------------------------------------------------------
 DATABASE_URL = os.getenv('DATABASE_URL')
 DB_ENGINE = os.getenv('DB_ENGINE', 'sqlite').lower()
@@ -150,12 +150,15 @@ USE_SQLITE_FALLBACK = env_bool('USE_SQLITE_FALLBACK', True)
 
 if DATABASE_URL:
     import dj_database_url
+    db_config = dj_database_url.config(
+        default=DATABASE_URL,
+        conn_max_age=0 if IS_VERCEL else 600,
+        conn_health_checks=True,
+    )
+    # Supabase Transaction Pooler (port 6543) requires disabling server-side cursors
+    db_config['DISABLE_SERVER_SIDE_CURSORS'] = True
     DATABASES = {
-        'default': dj_database_url.config(
-            default=DATABASE_URL,
-            conn_max_age=600,
-            conn_health_checks=True,
-        )
+        'default': db_config
     }
 elif DB_ENGINE == 'mysql' and not USE_SQLITE_FALLBACK and not IS_VERCEL:
     DATABASES = {
