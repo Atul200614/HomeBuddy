@@ -60,15 +60,15 @@ if not SECRET_KEY:
             "    python -c \"import secrets; print(secrets.token_urlsafe(64))\""
         )
 
-ALLOWED_HOSTS = env_list('ALLOWED_HOSTS', '.vercel.app,localhost,127.0.0.1,[::1]')
-if IS_VERCEL:
-    for host in ['.vercel.app', '*']:
+ALLOWED_HOSTS = env_list('ALLOWED_HOSTS', '.vercel.app,.onrender.com,localhost,127.0.0.1,[::1]')
+if IS_VERCEL or bool(os.environ.get('RENDER')):
+    for host in ['.vercel.app', '.onrender.com', '*']:
         if host not in ALLOWED_HOSTS:
             ALLOWED_HOSTS.append(host)
 
 CSRF_TRUSTED_ORIGINS = env_list(
     'CSRF_TRUSTED_ORIGINS',
-    'https://*.vercel.app,http://localhost:8000,http://127.0.0.1:8000',
+    'https://*.vercel.app,https://*.onrender.com,http://localhost:8000,http://127.0.0.1:8000,http://localhost:3000',
 )
 
 # ---------------------------------------------------------------------------
@@ -141,12 +141,22 @@ WSGI_APPLICATION = 'config.wsgi.application'
 ASGI_APPLICATION = 'config.asgi.application'
 
 # ---------------------------------------------------------------------------
-# Database: MySQL 8.0 by default, SQLite fallback (writable /tmp on Vercel)
+# Database: Render DATABASE_URL (PostgreSQL), MySQL 8.0, or SQLite fallback
 # ---------------------------------------------------------------------------
+DATABASE_URL = os.getenv('DATABASE_URL')
 DB_ENGINE = os.getenv('DB_ENGINE', 'sqlite').lower()
 USE_SQLITE_FALLBACK = env_bool('USE_SQLITE_FALLBACK', True)
 
-if DB_ENGINE == 'mysql' and not USE_SQLITE_FALLBACK and not IS_VERCEL:
+if DATABASE_URL:
+    import dj_database_url
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=DATABASE_URL,
+            conn_max_age=600,
+            conn_health_checks=True,
+        )
+    }
+elif DB_ENGINE == 'mysql' and not USE_SQLITE_FALLBACK and not IS_VERCEL:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.mysql',
