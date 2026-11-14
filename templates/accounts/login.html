@@ -13,6 +13,9 @@
 
                 <form method="POST">
                     {% csrf_token %}
+                    {% if next %}
+                        <input type="hidden" name="next" value="{{ next }}">
+                    {% endif %}
                     <div class="mb-3">
                         <label class="form-label small fw-bold">Email or Username</label>
                         {{ form.email }}
@@ -39,7 +42,7 @@
 
                 <div class="text-center pt-3 border-top mt-2 small">
                     <span class="text-muted">Don't have an account?</span>
-                    <a href="{% url 'accounts:register_customer' %}" class="fw-bold text-success text-decoration-none ms-1">Register as Customer</a>
+                    <a href="{% url 'accounts:register_customer' %}{% if next %}?next={{ next|urlencode }}{% endif %}" class="fw-bold text-success text-decoration-none ms-1">Register as Customer</a>
                 </div>
 
                 <div class="text-center mt-2 small">

@@ -13,6 +13,9 @@
 
                 <form method="POST">
                     {% csrf_token %}
+                    {% if next %}
+                        <input type="hidden" name="next" value="{{ next }}">
+                    {% endif %}
                     <div class="row g-3 mb-3">
                         <div class="col-sm-6">
                             <label class="form-label small fw-bold">First Name</label>
@@ -58,7 +61,7 @@
 
                 <div class="text-center pt-3 border-top mt-2 small">
                     <span class="text-muted">Already have an account?</span>
-                    <a href="{% url 'accounts:login' %}" class="fw-bold text-success text-decoration-none ms-1">Sign In</a>
+                    <a href="{% url 'accounts:login' %}{% if next %}?next={{ next|urlencode }}{% endif %}" class="fw-bold text-success text-decoration-none ms-1">Sign In</a>
                 </div>
             </div>
         </div>

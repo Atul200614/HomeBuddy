@@ -4,6 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Count, Q, Sum
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
 from apps.accounts.decorators import customer_required
@@ -73,6 +74,7 @@ def profile_view(request):
 @customer_required
 def addresses_view(request):
     addresses = Address.objects.filter(user=request.user)
+    next_url = request.POST.get('next') or request.GET.get('next') or ''
 
     if request.method == 'POST':
         form = AddressForm(request.POST)
@@ -81,6 +83,12 @@ def addresses_view(request):
             addr.user = request.user
             addr.save()
             messages.success(request, f"Address '{addr.get_title_display()}' saved.")
+            if next_url and url_has_allowed_host_and_scheme(
+                url=next_url,
+                allowed_hosts={request.get_host()},
+                require_https=request.is_secure(),
+            ):
+                return redirect(next_url)
             return redirect('customers:addresses')
         messages.error(request, "Please correct the address details.")
     else:
@@ -90,6 +98,7 @@ def addresses_view(request):
         'addresses': addresses,
         'form': form,
         'title': 'Saved Addresses',
+        'next': next_url,
     })
 
 

@@ -21,6 +21,8 @@ def register_customer(request):
     if request.user.is_authenticated:
         return redirect('accounts:role_redirect')
 
+    next_url = request.POST.get('next') or request.GET.get('next') or ''
+
     if request.method == 'POST':
         form = CustomerRegistrationForm(request.POST)
         if form.is_valid():
@@ -39,13 +41,19 @@ def register_customer(request):
                 f"Welcome to HomeBuddy, {user.first_name or user.username}! "
                 "Your customer account is ready.",
             )
+            if next_url and url_has_allowed_host_and_scheme(
+                url=next_url,
+                allowed_hosts={request.get_host()},
+                require_https=request.is_secure(),
+            ):
+                return redirect(next_url)
             return redirect('customers:dashboard')
         messages.error(request, "Please correct the errors in the registration form.")
     else:
         form = CustomerRegistrationForm()
 
     return render(request, 'accounts/register.html', {
-        'form': form, 'title': 'Create Customer Account',
+        'form': form, 'title': 'Create Customer Account', 'next': next_url,
     })
 
 

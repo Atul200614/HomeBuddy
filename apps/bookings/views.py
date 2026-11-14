@@ -17,7 +17,7 @@ from django.utils import timezone
 from apps.accounts.decorators import customer_required
 from apps.customers.models import Address, CustomerProfile
 from apps.notifications.services import notify
-from apps.payments.models import EarningsLedger, Invoice
+from apps.payments.models import EarningsLedger, Invoice, Payment
 from apps.professionals.models import ProviderProfile
 from apps.services.models import Service
 from .forms import BookingCreationForm
@@ -39,7 +39,7 @@ def pick_provider(service, address):
     Falls back to any verified provider covering the pincode, and only then to
     any verified provider, so a booking is never silently left unassigned.
     """
-    pincode = (address.pincode or '').strip()
+    pincode = (address.pincode or '').strip() if address else ''
 
     explicit = (
         ProviderProfile.objects
@@ -95,10 +95,6 @@ def create_booking(request, service_slug):
     service = get_object_or_404(Service, slug=service_slug, is_active=True)
     customer_profile, _ = CustomerProfile.objects.get_or_create(user=request.user)
 
-    if not Address.objects.filter(user=request.user).exists():
-        messages.warning(request, "Please add a service address before booking.")
-        return redirect('customers:addresses')
-
     if request.method == 'POST':
         form = BookingCreationForm(
             request.POST, user=request.user, service=service
@@ -108,6 +104,52 @@ def create_booking(request, service_slug):
             booking.customer = customer_profile
             booking.service = service
             booking.service_price = service.base_price
+
+            # Resolve delivery address: use chosen saved address OR create from inline fields
+            selected_address = form.cleaned_data.get('address')
+            if not selected_address:
+                house = (form.cleaned_data.get('house_flat_no') or '').strip()
+                street = (form.cleaned_data.get('street') or '').strip()
+                addr1 = f"{house}, {street}".strip(', ') if street else house
+                addr2 = (form.cleaned_data.get('area') or '').strip()
+                city = (form.cleaned_data.get('city') or 'Pune').strip() or 'Pune'
+                state = (form.cleaned_data.get('state') or 'Maharashtra').strip() or 'Maharashtra'
+                pincode = (form.cleaned_data.get('pincode') or '').strip()
+                title = form.cleaned_data.get('address_title') or 'Home'
+                is_default = form.cleaned_data.get('save_as_default', True)
+
+                selected_address = Address.objects.create(
+                    user=request.user,
+                    title=title,
+                    address_line1=addr1,
+                    address_line2=addr2,
+                    landmark=street if street != house else '',
+                    city=city,
+                    state=state,
+                    pincode=pincode,
+                    latitude=Decimal('18.520400'),
+                    longitude=Decimal('73.856700'),
+                    is_default=is_default,
+                )
+
+            booking.address = selected_address
+
+            # Save customer contact info to User profile if not yet populated
+            cust_name = (form.cleaned_data.get('customer_name') or '').strip()
+            cust_phone = (form.cleaned_data.get('customer_phone') or '').strip()
+            phone_digits = ''.join(ch for ch in cust_phone if ch.isdigit())
+            user_dirty = False
+            if phone_digits and len(phone_digits) == 10 and not request.user.phone:
+                request.user.phone = phone_digits
+                user_dirty = True
+            if cust_name and not request.user.first_name:
+                parts = cust_name.split(maxsplit=1)
+                request.user.first_name = parts[0]
+                if len(parts) > 1:
+                    request.user.last_name = parts[1]
+                user_dirty = True
+            if user_dirty:
+                request.user.save()
 
             wants_emergency = booking.is_emergency
             if wants_emergency and not service.is_emergency_eligible:
@@ -159,9 +201,18 @@ def create_booking(request, service_slug):
                 booking.save()
                 BookingStatusHistory.objects.create(
                     booking=booking,
+                    from_status=None,
                     to_status='REQUESTED',
                     changed_by=request.user,
                     notes="Customer created the booking.",
+                )
+                Payment.objects.get_or_create(
+                    booking=booking,
+                    defaults={
+                        'amount': booking.total_amount,
+                        'status': 'PENDING',
+                        'payment_method': 'ONLINE_RAZORPAY',
+                    },
                 )
                 notify(
                     request.user,
@@ -185,6 +236,7 @@ def create_booking(request, service_slug):
                 request,
                 f"Booking #{booking.booking_number} created. Choose your payment method.",
             )
+            # Proceed directly to Step 3: Payment — NEVER TO LOGIN!
             return redirect('payments:checkout', booking_id=booking.id)
         else:
             messages.error(request, "Please correct the highlighted errors.")
@@ -199,9 +251,15 @@ def create_booking(request, service_slug):
 
 
 def _render_booking_form(request, service, form):
+    saved_addresses = (
+        Address.objects.filter(user=request.user)
+        if request.user.is_authenticated
+        else Address.objects.none()
+    )
     return render(request, 'bookings/book.html', {
         'service': service,
         'form': form,
+        'saved_addresses': saved_addresses,
         'title': f'Book {service.name}',
     })
 
@@ -230,8 +288,8 @@ def booking_detail(request, booking_id):
         return redirect('core:home')
 
     latest_location = booking.location_updates.first()
-    cust_lat = float(booking.address.latitude or Decimal('18.5204'))
-    cust_lng = float(booking.address.longitude or Decimal('73.8567'))
+    cust_lat = float((booking.address.latitude if booking.address else None) or Decimal('18.5204'))
+    cust_lng = float((booking.address.longitude if booking.address else None) or Decimal('73.8567'))
 
     return render(request, 'bookings/tracking.html', {
         'booking': booking,
@@ -519,8 +577,8 @@ def get_live_location(request, booking_id):
         return JsonResponse({'error': 'Forbidden'}, status=403)
 
     latest = booking.location_updates.first()
-    cust_lat = float(booking.address.latitude or Decimal('18.5204'))
-    cust_lng = float(booking.address.longitude or Decimal('73.8567'))
+    cust_lat = float((booking.address.latitude if booking.address else None) or Decimal('18.5204'))
+    cust_lng = float((booking.address.longitude if booking.address else None) or Decimal('73.8567'))
 
     if not latest or booking.status not in ['EN_ROUTE', 'ARRIVED', 'IN_PROGRESS']:
         return JsonResponse({

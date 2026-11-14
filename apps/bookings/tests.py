@@ -115,6 +115,61 @@ class BookingCreationTests(BookingTestBase):
         booking = Booking.objects.get(customer=self.customer_profile)
         self.assertEqual(booking.provider_id, self.provider.id)
 
+    def test_booking_with_inline_new_address(self):
+        """A customer with no saved address enters delivery address directly on Step 2."""
+        new_customer = make_user('newcust@example.com', 'CUSTOMER', '9700000001')
+        CustomerProfile.objects.create(user=new_customer)
+        self.client.force_login(new_customer)
+
+        payload = {
+            'address': '',
+            'customer_name': 'New Customer',
+            'customer_phone': '9700000001',
+            'address_title': 'Home',
+            'house_flat_no': 'B-304, Green Heights',
+            'street': 'Near Balewadi High Street',
+            'area': 'Balewadi',
+            'city': 'Pune',
+            'state': 'Maharashtra',
+            'pincode': '411045',
+            'scheduled_date': (timezone.localdate() + datetime.timedelta(days=3)).isoformat(),
+            'time_slot': '02:00 PM - 04:00 PM',
+            'special_instructions': 'Call when arrived',
+        }
+        response = self.client.post('/bookings/create/2-bhk-deep-cleaning/', payload)
+        self.assertEqual(response.status_code, 302)
+
+        booking = Booking.objects.get(customer__user=new_customer)
+        # MUST redirect directly to payment checkout, NEVER to login
+        self.assertEqual(response['Location'], f'/payments/checkout/{booking.id}/')
+        self.assertNotIn('/accounts/login/', response['Location'])
+        self.assertIsNotNone(booking.address)
+        self.assertEqual(booking.address.pincode, '411045')
+        self.assertEqual(booking.address.city, 'Pune')
+        self.assertEqual(booking.status, 'REQUESTED')
+        self.assertTrue(Address.objects.filter(user=new_customer, pincode='411045').exists())
+
+    def test_inline_address_validation_missing_pincode(self):
+        """Submitting an invalid PIN code on Step 2 re-renders the form with field error."""
+        new_customer = make_user('invalidpin@example.com', 'CUSTOMER', '9700000002')
+        CustomerProfile.objects.create(user=new_customer)
+        self.client.force_login(new_customer)
+
+        payload = {
+            'address': '',
+            'customer_name': 'Invalid Pin Customer',
+            'customer_phone': '9700000002',
+            'house_flat_no': 'Flat 101',
+            'area': 'Kothrud',
+            'city': 'Pune',
+            'pincode': '123',  # Invalid PIN (must be 6 digits)
+            'scheduled_date': (timezone.localdate() + datetime.timedelta(days=1)).isoformat(),
+            'time_slot': '10:00 AM - 12:00 PM',
+        }
+        response = self.client.post('/bookings/create/2-bhk-deep-cleaning/', payload)
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Booking.objects.filter(customer__user=new_customer).exists())
+
 
 class BookingStateMachineTests(BookingTestBase):
     def setUp(self):

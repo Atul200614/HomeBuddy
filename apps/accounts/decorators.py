@@ -3,12 +3,14 @@ from functools import wraps
 
 from django.contrib import messages
 from django.shortcuts import redirect
+from django.urls import reverse
 
 
 def _guard(request, predicate, role_label, login_message):
     if not request.user.is_authenticated:
         messages.warning(request, login_message)
-        return redirect('accounts:login')
+        login_url = f"{reverse('accounts:login')}?next={request.get_full_path()}"
+        return redirect(login_url)
     if not predicate:
         messages.error(request, f"Access restricted to {role_label} accounts.")
         return redirect('core:home')
@@ -16,14 +18,14 @@ def _guard(request, predicate, role_label, login_message):
 
 
 def customer_required(view_func):
-    """Allow only customers (and superusers, who are platform owners)."""
+    """Allow only customers (and superusers/admins)."""
 
     @wraps(view_func)
     def _wrapped(request, *args, **kwargs):
         blocked = _guard(
             request,
             request.user.is_authenticated
-            and (request.user.is_customer or request.user.is_superuser),
+            and (request.user.is_customer or request.user.is_superuser or request.user.is_admin_user),
             "Customer",
             "Please log in to continue.",
         )
