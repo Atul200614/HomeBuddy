@@ -42,10 +42,14 @@ class User(AbstractUser):
 
     def save(self, *args, **kwargs):
         # Keep username aligned with email so authenticate() stays predictable.
-        if not self.username and self.email:
-            self.username = self.email
         if self.email:
             self.email = self.email.strip().lower()
+        if not self.username and self.email:
+            self.username = self.email
+        elif self.username:
+            self.username = self.username.strip()
+            if '@' in self.username or (self.email and self.username.lower() == self.email):
+                self.username = self.username.lower()
         super().save(*args, **kwargs)
 
     @property

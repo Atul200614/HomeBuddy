@@ -61,7 +61,9 @@ if not SECRET_KEY:
             "    python -c \"import secrets; print(secrets.token_urlsafe(64))\""
         )
 
-ALLOWED_HOSTS = env_list('ALLOWED_HOSTS', '.vercel.app,.onrender.com,localhost,127.0.0.1,[::1]')
+ALLOWED_HOSTS = env_list('ALLOWED_HOSTS', '.vercel.app,.onrender.com,localhost,127.0.0.1,[::1],testserver')
+if 'testserver' not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append('testserver')
 if IS_VERCEL or bool(os.environ.get('RENDER')):
     for host in ['.vercel.app', '.onrender.com', '*']:
         if host not in ALLOWED_HOSTS:
@@ -188,6 +190,16 @@ AUTH_USER_MODEL = 'accounts.User'
 
 AUTHENTICATION_BACKENDS = [
     'apps.accounts.backends.EmailOrUsernameModelBackend',
+]
+
+# Password Hashers (bcrypt primary for new customer accounts; PBKDF2 backwards-compatible)
+PASSWORD_HASHERS = [
+    'django.contrib.auth.hashers.BCryptSHA256PasswordHasher',
+    'django.contrib.auth.hashers.BCryptPasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher',
+    'django.contrib.auth.hashers.Argon2PasswordHasher',
+    'django.contrib.auth.hashers.ScryptPasswordHasher',
 ]
 
 # ---------------------------------------------------------------------------

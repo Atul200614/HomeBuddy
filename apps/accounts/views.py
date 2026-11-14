@@ -22,20 +22,52 @@ def register_customer(request):
         return redirect('accounts:role_redirect')
 
     next_url = request.POST.get('next') or request.GET.get('next') or ''
+    is_json = (
+        request.content_type == 'application/json'
+        or request.headers.get('x-requested-with') == 'XMLHttpRequest'
+        or 'application/json' in request.META.get('HTTP_ACCEPT', '')
+    )
 
     if request.method == 'POST':
-        form = CustomerRegistrationForm(request.POST)
+        data = request.POST
+        if request.content_type == 'application/json':
+            import json
+            try:
+                data = json.loads(request.body.decode('utf-8'))
+            except (json.JSONDecodeError, UnicodeDecodeError):
+                data = {}
+
+        form = CustomerRegistrationForm(data)
         if form.is_valid():
             user = form.save()
             CustomerProfile.objects.get_or_create(user=user)
-            notify(
-                user,
-                "Welcome to HomeBuddy",
-                "Your customer account is ready. Add an address, then book your first service.",
-                'SYSTEM',
-                reverse('customers:dashboard'),
-            )
+            try:
+                notify(
+                    user,
+                    "Welcome to HomeBuddy",
+                    "Your customer account is ready. Add an address, then book your first service.",
+                    'SYSTEM',
+                    reverse('customers:dashboard'),
+                )
+            except Exception as exc:
+                logger.warning("Notification error during customer registration: %s", exc)
+
             login(request, user, backend='apps.accounts.backends.EmailOrUsernameModelBackend')
+
+            if is_json:
+                from django.http import JsonResponse
+                return JsonResponse({
+                    'success': True,
+                    'message': f"Welcome to HomeBuddy, {user.first_name or user.username}! Your customer account is ready.",
+                    'user': {
+                        'id': user.id,
+                        'name': user.get_full_name() or user.username,
+                        'email': user.email,
+                        'role': user.role,
+                    },
+                    'redirect_url': next_url or reverse('customers:dashboard')
+                }, status=201)
+
             messages.success(
                 request,
                 f"Welcome to HomeBuddy, {user.first_name or user.username}! "
@@ -48,6 +80,15 @@ def register_customer(request):
             ):
                 return redirect(next_url)
             return redirect('customers:dashboard')
+
+        if is_json:
+            from django.http import JsonResponse
+            return JsonResponse({
+                'success': False,
+                'errors': form.errors.get_json_data(),
+                'message': 'Please correct the errors in the registration form.'
+            }, status=400)
+
         messages.error(request, "Please correct the errors in the registration form.")
     else:
         form = CustomerRegistrationForm()
@@ -77,14 +118,17 @@ def register_provider(request):
                     or '411038, 411045, 411057'
                 ),
             )
-            notify(
-                user,
-                "Technician account created",
-                "Upload your Aadhaar and police verification documents to earn the "
-                "Verified badge and start receiving jobs.",
-                'VERIFICATION',
-                reverse('professionals:verification'),
-            )
+            try:
+                notify(
+                    user,
+                    "Technician account created",
+                    "Upload your Aadhaar and police verification documents to earn the "
+                    "Verified badge and start receiving jobs.",
+                    'VERIFICATION',
+                    reverse('professionals:verification'),
+                )
+            except Exception as exc:
+                logger.warning("Notification error during provider registration: %s", exc)
             login(request, user, backend='apps.accounts.backends.EmailOrUsernameModelBackend')
             messages.success(
                 request,

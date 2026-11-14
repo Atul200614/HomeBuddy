@@ -46,6 +46,10 @@ class PasswordValidatedMixin:
     def clean_phone(self):
         phone = (self.cleaned_data.get('phone') or '').strip()
         digits = ''.join(ch for ch in phone if ch.isdigit())
+        if len(digits) == 12 and digits.startswith('91'):
+            digits = digits[2:]
+        elif len(digits) == 11 and digits.startswith('0'):
+            digits = digits[1:]
         if len(digits) != 10:
             raise forms.ValidationError("Enter a valid 10-digit Indian mobile number.")
         if User.objects.filter(phone=digits).exists():
@@ -54,7 +58,8 @@ class PasswordValidatedMixin:
 
     def clean_email(self):
         email = (self.cleaned_data.get('email') or '').strip().lower()
-        if User.objects.filter(email__iexact=email).exists():
+        from django.db.models import Q
+        if User.objects.filter(Q(email__iexact=email) | Q(username__iexact=email)).exists():
             raise forms.ValidationError("An account with this email already exists.")
         return email
 
@@ -93,7 +98,9 @@ class CustomerRegistrationForm(PasswordValidatedMixin, forms.ModelForm):
     def save(self, commit=True):
         user = super().save(commit=False)
         user.role = 'CUSTOMER'
-        user.username = self.cleaned_data['email']
+        email = self.cleaned_data['email'].strip().lower()
+        user.email = email
+        user.username = email
         user.set_password(self.cleaned_data['password'])
         if commit:
             user.save()
@@ -163,7 +170,9 @@ class ProviderRegistrationForm(PasswordValidatedMixin, forms.ModelForm):
     def save(self, commit=True):
         user = super().save(commit=False)
         user.role = 'PROVIDER'
-        user.username = self.cleaned_data['email']
+        email = self.cleaned_data['email'].strip().lower()
+        user.email = email
+        user.username = email
         user.set_password(self.cleaned_data['password'])
         if commit:
             user.save()
