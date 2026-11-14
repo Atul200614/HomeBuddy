@@ -27,6 +27,8 @@ class Address(models.Model):
     city = models.CharField(max_length=100, default='Pune')
     state = models.CharField(max_length=100, default='Maharashtra')
     pincode = models.CharField(max_length=10, verbose_name="6-Digit Postal Code")
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     is_default = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 

@@ -102,6 +102,80 @@ class LoginLogoutTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(int(self.client.session['_auth_user_id']), self.user.pk)
 
+    def test_login_succeeds_with_username(self):
+        admin = User.objects.create_user(
+            username='myadmin', email='myadmin@example.com',
+            password='AdminPassword!123', role='ADMIN', is_staff=True
+        )
+        # Login using username
+        response = self.client.post(reverse('accounts:login'), {
+            'email': 'myadmin', 'password': 'AdminPassword!123',
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(int(self.client.session['_auth_user_id']), admin.pk)
+
+    def test_register_logout_and_repeat_login_lifecycle(self):
+        """Verify full lifecycle: register -> logout -> repeat login -> dashboard -> logout."""
+        # 1. Register
+        reg_response = self.client.post(reverse('accounts:register_customer'), {
+            'first_name': 'Aarav', 'last_name': 'Mehta',
+            'email': 'aarav.mehta@example.com', 'phone': '9876549999',
+            'password': 'SecurePass@123', 'confirm_password': 'SecurePass@123',
+        })
+        self.assertEqual(reg_response.status_code, 302)
+        aarav = User.objects.get(email='aarav.mehta@example.com')
+        self.assertEqual(int(self.client.session['_auth_user_id']), aarav.pk)
+
+        # 2. Logout
+        logout_response = self.client.post(reverse('accounts:logout'))
+        self.assertEqual(logout_response.status_code, 302)
+        self.assertNotIn('_auth_user_id', self.client.session)
+
+        # 3. Repeat Login with exact same credentials
+        login_response = self.client.post(reverse('accounts:login'), {
+            'email': 'aarav.mehta@example.com',
+            'password': 'SecurePass@123',
+        })
+        self.assertEqual(login_response.status_code, 302)
+        self.assertEqual(int(self.client.session['_auth_user_id']), aarav.pk)
+
+        # 4. Open Dashboard
+        dash_response = self.client.get(reverse('customers:dashboard'))
+        self.assertEqual(dash_response.status_code, 200)
+
+        # 5. Logout and Login again
+        self.client.post(reverse('accounts:logout'))
+        login_again = self.client.post(reverse('accounts:login'), {
+            'email': 'aarav.mehta@example.com',
+            'password': 'SecurePass@123',
+        })
+        self.assertEqual(login_again.status_code, 302)
+        self.assertEqual(int(self.client.session['_auth_user_id']), aarav.pk)
+
+    def test_password_change_flow(self):
+        self.client.force_login(self.user)
+        # Verify GET returns 200
+        get_res = self.client.get(reverse('accounts:password_change'))
+        self.assertEqual(get_res.status_code, 200)
+
+        # POST valid password change
+        post_res = self.client.post(reverse('accounts:password_change'), {
+            'old_password': 'Str0ngPass!23',
+            'new_password': 'BrandNewPass@999',
+            'confirm_password': 'BrandNewPass@999',
+        })
+        self.assertEqual(post_res.status_code, 302)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password('BrandNewPass@999'))
+
+    def test_password_reset_request_view(self):
+        response = self.client.post(reverse('accounts:password_reset'), {
+            'email': 'cust@example.com'
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('/accounts/password-reset/done/', response['Location'])
+
+
     def test_wrong_password_fails(self):
         response = self.client.post(reverse('accounts:login'), {
             'email': 'cust@example.com', 'password': 'nope',

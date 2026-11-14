@@ -12,6 +12,7 @@ Security model
 """
 
 import os
+import sys
 from decimal import Decimal
 from pathlib import Path
 
@@ -184,7 +185,6 @@ AUTH_USER_MODEL = 'accounts.User'
 
 AUTHENTICATION_BACKENDS = [
     'apps.accounts.backends.EmailOrUsernameModelBackend',
-    'django.contrib.auth.backends.ModelBackend',
 ]
 
 # ---------------------------------------------------------------------------
@@ -355,10 +355,10 @@ SESSION_COOKIE_SAMESITE = 'Lax'
 CSRF_COOKIE_SAMESITE = 'Lax'
 SESSION_COOKIE_AGE = 60 * 60 * 12  # 12 hours
 
-if not DEBUG:
+if not DEBUG and 'test' not in sys.argv:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
-    SECURE_SSL_REDIRECT = env_bool('SECURE_SSL_REDIRECT', False if IS_VERCEL else True)
+    SECURE_SSL_REDIRECT = env_bool('SECURE_SSL_REDIRECT', False)
     SECURE_HSTS_SECONDS = int(os.getenv('SECURE_HSTS_SECONDS', '31536000'))
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True

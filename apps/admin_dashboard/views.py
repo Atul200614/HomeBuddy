@@ -19,6 +19,8 @@ from apps.notifications.services import notify
 from apps.payments import razorpay_service
 from apps.payments.models import EarningsLedger, Invoice, Payment, PayoutRequest
 from apps.professionals.models import ProviderProfile, VerificationDocument
+from apps.services.models import Service, Category
+from apps.services.forms import ServiceForm, CategoryForm
 
 logger = logging.getLogger('homebuddy.admin_dashboard')
 
@@ -490,3 +492,93 @@ def process_payout(request, payout_id, action):
     )
     messages.success(request, message)
     return redirect('admin_dashboard:payouts')
+
+
+@login_required
+@admin_required
+def services_list(request):
+    category_slug = (request.GET.get('category') or '').strip()
+    search = (request.GET.get('q') or '').strip()
+
+    services = Service.objects.select_related('category').order_by('category__display_order', 'base_price')
+    if category_slug:
+        services = services.filter(category__slug=category_slug)
+    if search:
+        services = services.filter(
+            Q(name__icontains=search) | Q(short_description__icontains=search) | Q(category__name__icontains=search)
+        )
+
+    categories = Category.objects.all().order_by('display_order', 'name')
+    paginator = Paginator(services, PAGE_SIZE)
+    page_obj = paginator.get_page(request.GET.get('page'))
+    query_params = request.GET.copy()
+    query_params.pop('page', None)
+
+    return render(request, 'admin_dashboard/services.html', {
+        'services': page_obj,
+        'page_obj': page_obj,
+        'categories': categories,
+        'selected_category': category_slug,
+        'search': search,
+        'is_paginated': page_obj.has_other_pages(),
+        'querystring': query_params.urlencode(),
+        'title': 'Service Catalog Management',
+    })
+
+
+@login_required
+@admin_required
+def service_create(request):
+    if request.method == 'POST':
+        form = ServiceForm(request.POST, request.FILES)
+        if form.is_valid():
+            service = form.save()
+            messages.success(request, f"Service '{service.name}' created successfully.")
+            return redirect('admin_dashboard:services')
+        messages.error(request, "Please correct the highlighted errors.")
+    else:
+        form = ServiceForm()
+
+    return render(request, 'admin_dashboard/service_form.html', {
+        'form': form,
+        'action_title': 'Add New Service',
+        'title': 'Add New Service',
+    })
+
+
+@login_required
+@admin_required
+def service_edit(request, service_id):
+    service = get_object_or_404(Service, id=service_id)
+    if request.method == 'POST':
+        form = ServiceForm(request.POST, request.FILES, instance=service)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"Service '{service.name}' updated successfully.")
+            return redirect('admin_dashboard:services')
+        messages.error(request, "Please correct the highlighted errors.")
+    else:
+        form = ServiceForm(instance=service)
+
+    return render(request, 'admin_dashboard/service_form.html', {
+        'form': form,
+        'service': service,
+        'action_title': f'Edit Service: {service.name}',
+        'title': f'Edit Service - {service.name}',
+    })
+
+
+@login_required
+@admin_required
+@require_POST
+def service_delete(request, service_id):
+    service = get_object_or_404(Service, id=service_id)
+    if service.bookings.exists():
+        service.is_active = False
+        service.save(update_fields=['is_active'])
+        messages.info(request, f"Service '{service.name}' has existing booking records and has been deactivated instead of deleted.")
+    else:
+        service.delete()
+        messages.success(request, f"Service '{service.name}' removed from catalog.")
+    return redirect('admin_dashboard:services')
+

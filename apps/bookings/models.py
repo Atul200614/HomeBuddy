@@ -98,3 +98,20 @@ class WorkProof(models.Model):
     def __str__(self):
         status = "Confirmed" if self.customer_confirmed else "Pending Sign-off"
         return f"Work Proof for {self.booking.booking_number} [{status}]"
+
+
+class LocationUpdate(models.Model):
+    booking = models.ForeignKey(Booking, on_delete=models.CASCADE, related_name='location_updates')
+    provider = models.ForeignKey(ProviderProfile, on_delete=models.CASCADE, related_name='location_updates')
+    latitude = models.DecimalField(max_digits=9, decimal_places=6)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6)
+    heading = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+    speed = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-timestamp']
+
+    def __str__(self):
+        return f"Location for {self.booking.booking_number} ({self.latitude}, {self.longitude}) at {self.timestamp}"
+

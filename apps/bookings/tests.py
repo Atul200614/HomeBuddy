@@ -253,3 +253,55 @@ class BookingAccessTests(BookingTestBase):
         self.client.force_login(self.provider_user)
         response = self.client.get(f'/bookings/{self.booking.id}/')
         self.assertEqual(response.status_code, 200)
+
+
+class LocationTrackingTests(BookingTestBase):
+    def setUp(self):
+        super().setUp()
+        self.address.latitude = Decimal('18.507400')
+        self.address.longitude = Decimal('73.807700')
+        self.address.save()
+
+        self.booking = Booking.objects.create(
+            customer=self.customer_profile, provider=self.provider,
+            service=self.service, address=self.address,
+            scheduled_date=timezone.localdate(),
+            time_slot='10:00 AM - 12:00 PM',
+            service_price=Decimal('2999.00'), total_amount=Decimal('2999.00'),
+            status='EN_ROUTE',
+        )
+
+    def test_provider_can_post_live_location(self):
+        self.client.force_login(self.provider_user)
+        response = self.client.post(
+            f'/bookings/{self.booking.id}/location/update/',
+            data='{"latitude": 18.512000, "longitude": 73.815000, "speed": 30.0}',
+            content_type='application/json'
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json().get('status'), 'ok')
+        self.assertEqual(self.booking.location_updates.count(), 1)
+
+    def test_customer_can_retrieve_live_location_and_eta(self):
+        from apps.bookings.models import LocationUpdate
+        LocationUpdate.objects.create(
+            booking=self.booking, provider=self.provider,
+            latitude=Decimal('18.512000'), longitude=Decimal('73.815000'),
+            speed=Decimal('30.0')
+        )
+        # Customer requests tracking
+        self.client.force_login(self.customer)
+        response = self.client.get(f'/bookings/{self.booking.id}/location/')
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data.get('available'))
+        self.assertIn('eta_text', data)
+        self.assertIn('distance_km', data)
+
+    def test_unauthorized_user_cannot_view_location(self):
+        intruder = make_user('intruder@example.com', 'CUSTOMER', '9800000099')
+        CustomerProfile.objects.create(user=intruder)
+        self.client.force_login(intruder)
+        response = self.client.get(f'/bookings/{self.booking.id}/location/')
+        self.assertEqual(response.status_code, 403)
+

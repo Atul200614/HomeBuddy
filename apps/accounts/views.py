@@ -2,7 +2,8 @@
 import logging
 
 from django.contrib import messages
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
+from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -11,7 +12,7 @@ from django.views.decorators.http import require_POST
 from apps.customers.models import CustomerProfile
 from apps.notifications.services import notify
 from apps.professionals.models import ProviderProfile
-from .forms import CustomerRegistrationForm, ProviderRegistrationForm, UserLoginForm
+from .forms import CustomerRegistrationForm, ProviderRegistrationForm, UserLoginForm, UserPasswordChangeForm
 
 logger = logging.getLogger('homebuddy.accounts')
 
@@ -32,7 +33,7 @@ def register_customer(request):
                 'SYSTEM',
                 reverse('customers:dashboard'),
             )
-            login(request, user)
+            login(request, user, backend='apps.accounts.backends.EmailOrUsernameModelBackend')
             messages.success(
                 request,
                 f"Welcome to HomeBuddy, {user.first_name or user.username}! "
@@ -76,7 +77,7 @@ def register_provider(request):
                 'VERIFICATION',
                 reverse('professionals:verification'),
             )
-            login(request, user)
+            login(request, user, backend='apps.accounts.backends.EmailOrUsernameModelBackend')
             messages.success(
                 request,
                 "Your technician profile is created. Submit KYC documents to get verified.",
@@ -104,7 +105,7 @@ def login_view(request):
             password = form.cleaned_data['password']
             user = authenticate(request, username=email, password=password)
             if user is not None and user.is_active:
-                login(request, user)
+                login(request, user, backend='apps.accounts.backends.EmailOrUsernameModelBackend')
                 messages.success(
                     request, f"Welcome back, {user.first_name or user.username}!"
                 )
@@ -151,3 +152,51 @@ def role_redirect(request):
     if request.user.is_provider:
         return redirect('professionals:dashboard')
     return redirect('customers:dashboard')
+
+
+@login_required
+def password_change_view(request):
+    if request.method == 'POST':
+        form = UserPasswordChangeForm(user=request.user, data=request.POST)
+        if form.is_valid():
+            form.save()
+            update_session_auth_hash(request, request.user)
+            messages.success(request, "Your password has been changed successfully.")
+            return redirect('accounts:password_change')
+        messages.error(request, "Please correct the errors below.")
+    else:
+        form = UserPasswordChangeForm(user=request.user)
+
+    return render(request, 'accounts/password_change.html', {
+        'form': form,
+        'title': 'Change Password',
+    })
+
+
+def password_reset_view(request):
+    if request.user.is_authenticated:
+        return redirect('accounts:role_redirect')
+
+    if request.method == 'POST':
+        email = (request.POST.get('email') or '').strip().lower()
+        from .models import User
+        user = User.objects.filter(email__iexact=email).first()
+        if user:
+            messages.success(
+                request,
+                f"Password reset instructions have been sent to {email}. "
+                "(In demo mode, please use your standard credentials or contact admin)."
+            )
+            return redirect('accounts:password_reset_done')
+        messages.error(request, "No account was found with that email address.")
+
+    return render(request, 'accounts/password_reset.html', {
+        'title': 'Reset Forgotten Password',
+    })
+
+
+def password_reset_done_view(request):
+    return render(request, 'accounts/password_reset_done.html', {
+        'title': 'Password Reset Requested',
+    })
+

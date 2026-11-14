@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 800px;">
+    <div class="d-flex align-items-center gap-2 mb-4 border-bottom pb-3">
+        <a href="{% url 'admin_dashboard:services' %}" class="btn btn-sm btn-outline-secondary rounded-circle" title="Back to Services">
+            <i class="bi bi-arrow-left"></i>
+        </a>
+        <div>
+            <h3 class="fw-bold mb-0">{{ action_title }}</h3>
+            <p class="text-muted small mb-0">Fill in the specifications for this bookable service.</p>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 p-4 bg-white">
+        <form method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <label class="form-label small fw-bold">Service Category</label>
+                    {{ form.category }}
+                    {% if form.category.errors %}
+                        <div class="text-danger small mt-1">{{ form.category.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label small fw-bold">Pricing Type</label>
+                    {{ form.pricing_type }}
+                    {% if form.pricing_type.errors %}
+                        <div class="text-danger small mt-1">{{ form.pricing_type.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label small fw-bold">Service Name</label>
+                {{ form.name }}
+                {% if form.name.errors %}
+                    <div class="text-danger small mt-1">{{ form.name.errors }}</div>
+                {% endif %}
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <label class="form-label small fw-bold">Base Price (₹)</label>
+                    {{ form.base_price }}
+                    {% if form.base_price.errors %}
+                        <div class="text-danger small mt-1">{{ form.base_price.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label small fw-bold">Estimated Duration (Minutes)</label>
+                    {{ form.estimated_duration_minutes }}
+                    {% if form.estimated_duration_minutes.errors %}
+                        <div class="text-danger small mt-1">{{ form.estimated_duration_minutes.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="row g-3 mb-3 p-3 bg-light rounded-3">
+                <div class="col-md-6 d-flex align-items-center">
+                    <div class="form-check form-switch">
+                        {{ form.is_emergency_eligible }}
+                        <label class="form-check-label small fw-bold ms-2" for="{{ form.is_emergency_eligible.id_for_label }}">
+                            Emergency Express Dispatch Eligible
+                        </label>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label small fw-bold">Emergency Surcharge (₹)</label>
+                    {{ form.emergency_surcharge }}
+                    {% if form.emergency_surcharge.errors %}
+                        <div class="text-danger small mt-1">{{ form.emergency_surcharge.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label small fw-bold">Short Description (Card Teaser)</label>
+                {{ form.short_description }}
+                {% if form.short_description.errors %}
+                    <div class="text-danger small mt-1">{{ form.short_description.errors }}</div>
+                {% endif %}
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label small fw-bold">Detailed Inclusions & Workflow</label>
+                {{ form.detailed_description }}
+                {% if form.detailed_description.errors %}
+                    <div class="text-danger small mt-1">{{ form.detailed_description.errors }}</div>
+                {% endif %}
+            </div>
+
+            <div class="mb-4 form-check form-switch">
+                {{ form.is_active }}
+                <label class="form-check-label small fw-bold ms-2" for="{{ form.is_active.id_for_label }}">
+                    Service is Active & Available for Customer Bookings
+                </label>
+            </div>
+
+            <div class="d-flex justify-content-end gap-2 border-top pt-3">
+                <a href="{% url 'admin_dashboard:services' %}" class="btn btn-outline-secondary rounded-pill px-4">Cancel</a>
+                <button type="submit" class="btn btn-hb-green rounded-pill px-4">
+                    <i class="bi bi-check-circle me-1"></i> Save Service
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

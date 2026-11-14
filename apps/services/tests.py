@@ -69,9 +69,51 @@ class AdminPanelTests(TestCase):
         for url in ['/admin-panel/', '/admin-panel/users/', '/admin-panel/verifications/',
                     '/admin-panel/bookings/', '/admin-panel/payments/',
                     '/admin-panel/payouts/', '/admin-panel/complaints/',
+                    '/admin-panel/services/',
                     '/django-admin/']:
             response = self.client.get(url)
             self.assertEqual(response.status_code, 200, url)
+
+    def test_admin_create_and_edit_service(self):
+        cat = Category.objects.create(name='Carpentry', slug='carpentry')
+        # Create service
+        create_res = self.client.post('/admin-panel/services/create/', {
+            'category': cat.id,
+            'name': 'Custom Dining Table Assembly',
+            'pricing_type': 'FIXED',
+            'base_price': '799.00',
+            'estimated_duration_minutes': 90,
+            'emergency_surcharge': '0.00',
+            'short_description': 'Assemble 6-seater wooden table',
+            'detailed_description': 'Precision joint assembly with level check',
+            'is_active': 'on',
+        })
+        self.assertEqual(create_res.status_code, 302)
+        service = Service.objects.get(name='Custom Dining Table Assembly')
+        self.assertEqual(service.base_price, Decimal('799.00'))
+
+        # Edit service
+        edit_res = self.client.post(f'/admin-panel/services/{service.id}/edit/', {
+            'category': cat.id,
+            'name': 'Custom Dining Table Assembly (Updated)',
+            'pricing_type': 'FIXED',
+            'base_price': '899.00',
+            'estimated_duration_minutes': 100,
+            'emergency_surcharge': '0.00',
+            'short_description': 'Assemble 6-seater wooden table with chairs',
+            'detailed_description': 'Full assembly',
+            'is_active': 'on',
+        })
+        self.assertEqual(edit_res.status_code, 302)
+        service.refresh_from_db()
+        self.assertEqual(service.name, 'Custom Dining Table Assembly (Updated)')
+        self.assertEqual(service.base_price, Decimal('899.00'))
+
+        # Delete service
+        del_res = self.client.post(f'/admin-panel/services/{service.id}/delete/')
+        self.assertEqual(del_res.status_code, 302)
+        self.assertFalse(Service.objects.filter(id=service.id).exists())
+
 
     def test_cannot_suspend_self(self):
         response = self.client.post(f'/admin-panel/users/{self.admin.id}/toggle-active/')
@@ -208,3 +250,26 @@ class NotificationTests(TestCase):
         self.client.post(f'/notifications/{notif.id}/read/')
         notif.refresh_from_db()
         self.assertTrue(notif.is_read)
+
+
+class InventoryAndSeedCompletenessTest(TestCase):
+    def test_seed_populates_all_six_categories_and_sixty_services(self):
+        from django.core.management import call_command
+        call_command('seed_homebuddy')
+
+        expected_categories = ['cleaning', 'electrical', 'plumbing', 'carpentry', 'painting', 'cooking']
+        for slug in expected_categories:
+            cat = Category.objects.filter(slug=slug).first()
+            self.assertIsNotNone(cat, f"Category '{slug}' missing")
+            service_count = cat.services.filter(is_active=True).count()
+            self.assertGreaterEqual(service_count, 10, f"Category '{slug}' has only {service_count} services; expected at least 10")
+
+        total_active_services = Service.objects.filter(is_active=True).count()
+        self.assertGreaterEqual(total_active_services, 60, f"Expected 60+ active services, found {total_active_services}")
+
+        # Verify all 6 categories have offering providers
+        for slug in expected_categories:
+            cat = Category.objects.get(slug=slug)
+            has_providers = ProviderService.objects.filter(service__category=cat, provider__is_verified=True).exists()
+            self.assertTrue(has_providers, f"Category '{slug}' has no verified offering providers")
+

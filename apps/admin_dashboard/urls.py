@@ -17,4 +17,8 @@ urlpatterns = [
     path('payouts/<int:payout_id>/<str:action>/', views.process_payout, name='process_payout'),
     path('complaints/', views.complaints_list, name='complaints'),
     path('complaints/<int:complaint_id>/resolve/', views.resolve_complaint, name='resolve_complaint'),
+    path('services/', views.services_list, name='services'),
+    path('services/create/', views.service_create, name='service_create'),
+    path('services/<int:service_id>/edit/', views.service_edit, name='service_edit'),
+    path('services/<int:service_id>/delete/', views.service_delete, name='service_delete'),
 ]

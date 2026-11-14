@@ -1,13 +1,16 @@
 """Booking engine: creation, tracking, completion sign-off, cancellation."""
 import datetime
+import json
 import logging
-from decimal import Decimal
+import math
+from decimal import Decimal, InvalidOperation
 
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.db.models import Q
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
@@ -18,7 +21,7 @@ from apps.payments.models import EarningsLedger, Invoice
 from apps.professionals.models import ProviderProfile
 from apps.services.models import Service
 from .forms import BookingCreationForm
-from .models import Booking, BookingStatusHistory, WorkProof
+from .models import Booking, BookingStatusHistory, WorkProof, LocationUpdate
 
 logger = logging.getLogger('homebuddy.bookings')
 
@@ -226,6 +229,10 @@ def booking_detail(request, booking_id):
         messages.error(request, "Access denied. You are not authorised to view this booking.")
         return redirect('core:home')
 
+    latest_location = booking.location_updates.first()
+    cust_lat = float(booking.address.latitude or Decimal('18.5204'))
+    cust_lng = float(booking.address.longitude or Decimal('73.8567'))
+
     return render(request, 'bookings/tracking.html', {
         'booking': booking,
         'history': booking.status_history.select_related('changed_by'),
@@ -233,6 +240,9 @@ def booking_detail(request, booking_id):
         'payment': getattr(booking, 'payment', None),
         'invoice': getattr(booking, 'invoice', None),
         'review': getattr(booking, 'review', None),
+        'latest_location': latest_location,
+        'cust_lat': cust_lat,
+        'cust_lng': cust_lng,
         'is_customer': is_cust,
         'is_provider': is_prov,
         'is_admin': is_adm,
@@ -438,3 +448,117 @@ def rebook(request, booking_id):
         "Pick a date and slot to rebook the same service at the same address.",
     )
     return redirect('bookings:create', service_slug=previous.service.slug)
+
+
+def _haversine_distance_km(lat1, lon1, lat2, lon2):
+    R = 6371.0
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+    a = math.sin(dlat / 2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2)**2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    return round(R * c, 2)
+
+
+@login_required
+def update_location(request, booking_id):
+    """
+    POST-only endpoint: assigned provider reports live GPS coordinates.
+    Only permitted during active booking stages (ACCEPTED, EN_ROUTE, ARRIVED, IN_PROGRESS).
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+
+    booking = get_object_or_404(Booking, id=booking_id)
+
+    # Authorization check: only assigned provider can report location
+    if not (hasattr(request.user, 'provider_profile') and booking.provider_id == request.user.provider_profile.id):
+        return JsonResponse({'error': 'Unauthorized'}, status=403)
+
+    if booking.status not in ['ACCEPTED', 'EN_ROUTE', 'ARRIVED', 'IN_PROGRESS']:
+        return JsonResponse({'error': 'Location tracking is only active during scheduled service delivery'}, status=400)
+
+    try:
+        if request.content_type == 'application/json':
+            data = json.loads(request.body.decode('utf-8'))
+        else:
+            data = request.POST
+        lat = Decimal(str(data.get('latitude')))
+        lng = Decimal(str(data.get('longitude')))
+        heading = Decimal(str(data.get('heading'))) if data.get('heading') is not None else None
+        speed = Decimal(str(data.get('speed'))) if data.get('speed') is not None else None
+    except (ValueError, TypeError, InvalidOperation):
+        return JsonResponse({'error': 'Invalid coordinates provided'}, status=400)
+
+    loc = LocationUpdate.objects.create(
+        booking=booking,
+        provider=booking.provider,
+        latitude=lat,
+        longitude=lng,
+        heading=heading,
+        speed=speed,
+    )
+    return JsonResponse({'status': 'ok', 'timestamp': loc.timestamp.isoformat()})
+
+
+@login_required
+def get_live_location(request, booking_id):
+    """
+    JSON endpoint: provides real-time technician coordinates, customer address pin,
+    and computed ETA for map rendering.
+    """
+    booking = get_object_or_404(
+        Booking.objects.select_related('customer__user', 'provider__user', 'address'),
+        id=booking_id
+    )
+
+    is_cust = hasattr(request.user, 'customer_profile') and booking.customer_id == request.user.customer_profile.id
+    is_prov = hasattr(request.user, 'provider_profile') and booking.provider_id == request.user.provider_profile.id
+    is_adm = request.user.is_admin_user or request.user.is_superuser
+
+    if not (is_cust or is_prov or is_adm):
+        return JsonResponse({'error': 'Forbidden'}, status=403)
+
+    latest = booking.location_updates.first()
+    cust_lat = float(booking.address.latitude or Decimal('18.5204'))
+    cust_lng = float(booking.address.longitude or Decimal('73.8567'))
+
+    if not latest or booking.status not in ['EN_ROUTE', 'ARRIVED', 'IN_PROGRESS']:
+        return JsonResponse({
+            'available': False,
+            'status': booking.status,
+            'status_display': booking.get_status_display(),
+            'customer_lat': cust_lat,
+            'customer_lng': cust_lng,
+            'message': 'Live tracking will activate once the technician is en route.'
+        })
+
+    prov_lat = float(latest.latitude)
+    prov_lng = float(latest.longitude)
+    dist_km = _haversine_distance_km(prov_lat, prov_lng, cust_lat, cust_lng)
+
+    speed = float(latest.speed) if latest.speed and float(latest.speed) > 5 else 25.0
+    eta_mins = max(1, round((dist_km / speed) * 60))
+
+    if booking.status == 'ARRIVED':
+        eta_text = "Technician arrived at location"
+    elif booking.status == 'IN_PROGRESS':
+        eta_text = "Service in progress"
+    elif dist_km < 0.2:
+        eta_text = "Arriving now (< 2 mins)"
+    else:
+        eta_text = f"~{eta_mins} mins ({dist_km} km away)"
+
+    return JsonResponse({
+        'available': True,
+        'status': booking.status,
+        'status_display': booking.get_status_display(),
+        'provider_lat': prov_lat,
+        'provider_lng': prov_lng,
+        'customer_lat': cust_lat,
+        'customer_lng': cust_lng,
+        'distance_km': dist_km,
+        'eta_minutes': eta_mins,
+        'eta_text': eta_text,
+        'updated_at': latest.timestamp.isoformat(),
+    })
+
